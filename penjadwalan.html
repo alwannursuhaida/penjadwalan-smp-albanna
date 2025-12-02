@@ -9,25 +9,50 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        
         .drag-over { background-color: #e0f2fe !important; border: 2px dashed #3b82f6; }
         .conflict { border: 2px solid red !important; background-color: #fee2e2 !important; }
-        
-        /* Sticky Header untuk Jam */
-        .sticky-header th { position: sticky; top: 0; z-index: 10; background-color: #1f2937; color: white; }
-        /* Sticky Column untuk Kelas */
-        .sticky-col { position: sticky; left: 0; z-index: 10; background-color: #f3f4f6; }
+
+        /* SCROLLBAR CUSTOM */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* STICKY HEADERS */
+        th.sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+        }
+        td.sticky-left, th.sticky-left {
+            position: sticky;
+            left: 0;
+            z-index: 30;
+            background-color: #f8fafc;
+            border-right: 2px solid #e2e8f0;
+        }
+        th.corner-header {
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 40;
+            background-color: #1e3a8a;
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
-    <header class="bg-blue-900 text-white p-4 flex justify-between items-center shadow-md flex-shrink-0">
+    <header class="bg-blue-900 text-white p-3 flex justify-between items-center shadow-md flex-shrink-0">
         <div class="flex items-center gap-4">
-            <a href="index.html" class="text-blue-200 hover:text-white"><i class="fas fa-arrow-left"></i> Dashboard</a>
-            <h1 class="text-xl font-bold border-l border-blue-700 pl-4">Penyusunan Jadwal Kelas</h1>
+            <a href="index.html" class="text-blue-200 hover:text-white text-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
+            <h1 class="text-lg font-bold border-l border-blue-700 pl-4">Penyusunan Jadwal</h1>
         </div>
-        <div class="flex gap-3 items-center">
-            <label class="font-semibold text-sm">Lihat Hari:</label>
-            <select id="select-hari" onchange="renderJadwalView()" class="text-gray-800 rounded p-1 text-sm font-bold">
+        <div class="flex gap-2 items-center">
+            <label class="font-semibold text-xs text-blue-200">Lihat Hari:</label>
+            <select id="select-hari" onchange="renderJadwalView()" class="text-gray-800 rounded p-1 text-sm font-bold border-none outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="senin">Senin</option>
                 <option value="selasa">Selasa</option>
                 <option value="rabu">Rabu</option>
@@ -35,10 +60,10 @@
                 <option value="jumat">Jumat</option>
             </select>
             
-            <button onclick="simpanJadwalFix()" class="bg-green-500 hover:bg-green-600 px-4 py-1 rounded text-sm font-bold shadow ml-4">
+            <button onclick="simpanJadwalFix()" class="bg-green-500 hover:bg-green-600 px-3 py-1 rounded text-sm font-bold shadow ml-2 transition">
                 <i class="fas fa-save mr-1"></i> Simpan
             </button>
-            <button onclick="resetJadwal()" class="bg-red-500 hover:bg-red-600 px-4 py-1 rounded text-sm font-bold shadow">
+            <button onclick="resetJadwal()" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm font-bold shadow transition">
                 <i class="fas fa-trash"></i> Reset
             </button>
         </div>
@@ -46,28 +71,26 @@
 
     <div class="flex flex-1 overflow-hidden">
         
-        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-lg z-20">
-            <div class="p-4 border-b bg-gray-50">
-                <h3 class="font-bold text-gray-700"><i class="fas fa-book mr-2"></i>Mapel</h3>
-                <p class="text-xs text-gray-500">Drag mapel ke tabel.</p>
+        <aside class="w-56 bg-white border-r border-gray-200 flex flex-col shadow-lg z-10 flex-shrink-0">
+            <div class="p-3 border-b bg-gray-50">
+                <h3 class="font-bold text-gray-700 text-sm"><i class="fas fa-book mr-2"></i>Mapel</h3>
+                <p class="text-[10px] text-gray-500">Drag mapel ke dalam grid.</p>
             </div>
-            <div id="source-container" class="flex-1 overflow-y-auto p-3 space-y-2">
+            <div id="source-container" class="flex-1 overflow-y-auto p-2 space-y-2">
                 </div>
-            <div class="p-3 border-t bg-yellow-50 text-xs text-yellow-800">
-                <i class="fas fa-exclamation-triangle mr-1"></i> 
+            <div class="p-2 border-t bg-yellow-50 text-[10px] text-yellow-800 leading-tight">
                 <b>Aturan Tabrakan:</b><br>
                 1. Guru (Global)<br>
-                2. Angkatan (Kecuali PJOK)<br>
-                3. Lab (Info, IPA, Seni, B.Bali)
+                2. Angkatan (Kecuali PJOK & Doa)<br>
+                3. Lab (Info, IPA, dll)
             </div>
         </aside>
 
-        <main class="flex-1 overflow-auto bg-gray-100 p-4 relative">
-            <div class="bg-white rounded shadow border border-gray-300 inline-block min-w-full">
-                <table class="w-full border-collapse text-sm">
-                    <thead class="sticky-header">
+        <main class="flex-1 overflow-auto bg-gray-200 p-2 relative">
+            <div class="bg-white rounded shadow border border-gray-300 inline-block">
+                <table class="border-collapse text-sm whitespace-nowrap">
+                    <thead>
                         <tr id="header-row">
-                            <th class="p-3 border w-24 z-20 sticky-col text-left pl-4">KELAS</th>
                             </tr>
                     </thead>
                     <tbody id="jadwal-body">
@@ -78,20 +101,19 @@
     </div>
 
     <script>
-        // === DATA STORE ===
+        // === KONFIGURASI KELAS ===
         const kelasList = [
             '7A', '7B', '7C', '7D', '7E', '7F',
             '8A', '8B', '8C', '8D', '8E', '8F',
             '9A', '9B', '9C', '9D', '9E'
         ];
         
-        // Mapel Khusus (Lab/Ruang Khusus) - Validasi Lintas Angkatan
+        // Mapel Khusus (Lab/Ruang Khusus) - Tidak boleh bareng se-sekolah
         const labSubjects = ['informatika', 'ipa', 'seni budaya', 'bahasa bali'];
         
         let mapelData = [];
         let guruData = [];
         let settingData = {};
-        // Struktur Jadwal: { "senin-7A-1": {mapelId: x, guruId: y}, ... }
         let jadwalFix = {}; 
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -106,7 +128,6 @@
             settingData = JSON.parse(localStorage.getItem('jadwal_pengaturan')) || { slots: [] };
             jadwalFix = JSON.parse(localStorage.getItem('jadwal_fix')) || {};
 
-            // Validasi jika data kosong
             if(settingData.slots.length === 0) {
                 alert("Silakan atur Jam Pelajaran dulu di menu Pengaturan Waktu!");
                 window.location.href = 'pengaturan-waktu.html';
@@ -120,7 +141,7 @@
             
             mapelData.forEach(m => {
                 const div = document.createElement('div');
-                div.className = "p-3 rounded shadow-sm border cursor-move text-white font-medium text-sm flex justify-between items-center hover:scale-105 transition transform";
+                div.className = "p-2 rounded shadow-sm border cursor-move text-white font-medium text-xs flex justify-between items-center hover:scale-105 transition transform";
                 div.style.backgroundColor = m.warna;
                 div.innerText = m.nama;
                 
@@ -132,63 +153,68 @@
             });
         }
 
-        // --- RENDER UTAMA (VIEW PER HARI) ---
+        // --- RENDER UTAMA (TRANSPOSE LAYOUT) ---
         function renderJadwalView() {
             const hari = document.getElementById('select-hari').value;
             const headerRow = document.getElementById('header-row');
             const tbody = document.getElementById('jadwal-body');
 
-            // 1. Render Header (Jam Pelajaran)
-            headerRow.innerHTML = `<th class="p-3 border w-24 z-20 sticky-col bg-gray-800 text-white">KELAS</th>`;
-            settingData.slots.forEach(slot => {
-                const isIstirahat = slot.type === 'istirahat';
-                const bg = isIstirahat ? 'bg-orange-600' : 'bg-gray-800';
-                headerRow.innerHTML += `
-                    <th class="p-2 border text-center w-32 ${bg} text-white">
-                        <div class="text-xs font-light">${slot.start} - ${slot.end}</div>
-                        <div>JP ${slot.no}</div>
+            // 1. RENDER HEADER (KELAS MENYAMPING)
+            let headerHTML = `<th class="p-3 border w-24 sticky-left corner-header text-center">WAKTU / KELAS</th>`;
+            
+            kelasList.forEach(kelas => {
+                const angkatan = kelas.substring(0, 1);
+                let bgClass = '#dbeafe'; // Biru (7)
+                if(angkatan === '8') bgClass = '#dcfce7'; // Hijau (8)
+                if(angkatan === '9') bgClass = '#f3e8ff'; // Ungu (9)
+                
+                headerHTML += `
+                    <th class="p-2 border text-center min-w-[140px] sticky-top" style="background-color: ${bgClass}; color: #1f2937;">
+                        <span class="text-lg font-bold">${kelas}</span>
                     </th>
                 `;
             });
+            headerRow.innerHTML = headerHTML;
 
-            // 2. Render Rows (Kelas 7A - 9E)
+            // 2. RENDER BARIS (JAM KE BAWAH)
             tbody.innerHTML = '';
-            kelasList.forEach(kelas => {
+            settingData.slots.forEach(slot => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50";
+                const isIstirahat = slot.type === 'istirahat';
+                
+                const infoWaktu = `
+                    <td class="border p-2 text-center sticky-left font-bold text-gray-700 shadow-sm" style="min-width: 100px;">
+                        <div class="text-xs text-gray-500 mb-1">${slot.start} - ${slot.end}</div>
+                        <div class="bg-gray-200 rounded px-2 py-1 inline-block text-xs">JP ${slot.no}</div>
+                    </td>
+                `;
 
-                // Kolom Nama Kelas (Sticky Kiri)
-                const angkatan = kelas.substring(0, 1); // 7, 8, atau 9
-                let colorClass = 'bg-blue-100 text-blue-800';
-                if(angkatan === '8') colorClass = 'bg-green-100 text-green-800';
-                if(angkatan === '9') colorClass = 'bg-purple-100 text-purple-800';
-
-                tr.innerHTML = `<td class="p-3 border font-bold text-center sticky-col ${colorClass}">${kelas}</td>`;
-
-                // Kolom Jam
-                settingData.slots.forEach(slot => {
-                    if (slot.type === 'istirahat') {
-                        tr.innerHTML += `<td class="border bg-orange-100 text-center text-xs text-orange-400 font-bold slant">ISTIRAHAT</td>`;
-                    } else {
-                        // Key Unik: hari-kelas-jam
+                if (isIstirahat) {
+                    tr.innerHTML = infoWaktu + `
+                        <td colspan="${kelasList.length}" class="bg-orange-100 text-center font-bold text-orange-600 tracking-widest border border-orange-200">
+                            I S T I R A H A T
+                        </td>
+                    `;
+                } else {
+                    tr.innerHTML = infoWaktu;
+                    kelasList.forEach(kelas => {
                         const cellId = `${hari}-${kelas}-${slot.no}`;
-                        
                         tr.innerHTML += `
-                            <td id="${cellId}" class="border p-1 relative h-20 align-top transition hover:bg-blue-50"
+                            <td id="${cellId}" class="border p-1 relative h-24 align-top transition hover:bg-gray-50 bg-white"
                                 ondragover="allowDrop(event)" 
                                 ondragleave="leaveDrop(event)" 
                                 ondrop="drop(event, '${hari}', '${kelas}', '${slot.no}')">
                             </td>
                         `;
-                    }
-                });
+                    });
+                }
                 tbody.appendChild(tr);
             });
 
-            // 3. Isi Data (Hydrate Cells)
             hydrateCells(hari);
         }
 
+        // --- HYDRATE / ISI DATA ---
         function hydrateCells(hari) {
             kelasList.forEach(kelas => {
                 settingData.slots.forEach(slot => {
@@ -197,7 +223,6 @@
                         const data = jadwalFix[cellId];
                         if (data) {
                             renderCellContent(cellId, data.mapelId, data.guruId);
-                            // Cek tabrakan lagi (visual validation)
                             checkAllConflicts(hari, kelas, slot.no, data.mapelId, data.guruId, cellId);
                         }
                     }
@@ -205,7 +230,7 @@
             });
         }
 
-        // --- DRAG & DROP LOGIC ---
+        // --- DRAG & DROP & VALIDATION ---
         function allowDrop(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
         function leaveDrop(e) { e.currentTarget.classList.remove('drag-over'); }
 
@@ -217,17 +242,11 @@
             const raw = e.dataTransfer.getData('text/plain');
             if(!raw) return;
             const mapel = JSON.parse(raw);
-
-            // Simpan ke state sementara (guru masih kosong)
             const cellId = cell.id;
             
-            // Render dulu
             renderCellContent(cellId, mapel.id, null);
-            
-            // Simpan ke memory
             updateJadwalMemory(cellId, mapel.id, null);
 
-            // Validasi Awal (Level Mapel)
             const conflict = validateMove(hari, kelas, jam, mapel.id, null);
             if(conflict.status) {
                 alert(`PERINGATAN: ${conflict.msg}`);
@@ -237,27 +256,25 @@
             }
         }
 
-        // --- RENDER ISI KOTAK ---
         function renderCellContent(cellId, mapelId, currentGuruId) {
             const cell = document.getElementById(cellId);
             const mapel = mapelData.find(m => m.id == mapelId);
             if(!mapel) return;
 
-            // Buat opsi guru
-            let options = `<option value="">Pilih Guru...</option>`;
+            let options = `<option value="">Guru...</option>`;
             guruData.forEach(g => {
                 const sel = (g.id == currentGuruId) ? 'selected' : '';
-                options += `<option value="${g.id}" ${sel}>${g.kode} - ${g.nama}</option>`;
+                options += `<option value="${g.id}" ${sel}>${g.kode}</option>`;
             });
 
             cell.innerHTML = `
-                <div class="h-full w-full rounded p-1 text-xs shadow-sm flex flex-col justify-between" 
-                     style="background-color: ${mapel.warna}20; border-left: 3px solid ${mapel.warna};">
+                <div class="h-full w-full rounded p-1 text-[10px] shadow-sm flex flex-col gap-1" 
+                     style="background-color: ${mapel.warna}20; border-top: 3px solid ${mapel.warna};">
                     <div class="flex justify-between items-start">
-                        <span class="font-bold text-gray-800 truncate" title="${mapel.nama}">${mapel.nama}</span>
+                        <span class="font-bold text-gray-800 leading-tight line-clamp-2" title="${mapel.nama}">${mapel.nama}</span>
                         <button onclick="hapusJadwal('${cellId}')" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
                     </div>
-                    <select onchange="onGuruChange(this, '${cellId}')" class="w-full mt-1 border border-gray-300 rounded text-xs p-1 bg-white">
+                    <select onchange="onGuruChange(this, '${cellId}')" class="w-full border border-gray-300 rounded p-0.5 bg-white bg-opacity-70 text-[10px]">
                         ${options}
                     </select>
                 </div>
@@ -272,31 +289,27 @@
 
         function hapusJadwal(cellId) {
             delete jadwalFix[cellId];
-            document.getElementById(cellId).innerHTML = '';
-            document.getElementById(cellId).classList.remove('conflict');
+            const cell = document.getElementById(cellId);
+            cell.innerHTML = '';
+            cell.classList.remove('conflict');
         }
 
-        // --- VALIDATION CORE (THE LOGIC) ---
         function onGuruChange(selectEl, cellId) {
             const guruId = selectEl.value;
             const data = jadwalFix[cellId];
-            data.guruId = guruId; // Update guru
-
-            // Parse ID untuk dapat konteks
-            const [hari, kelas, jam] = cellId.split('-');
+            data.guruId = guruId;
             
-            // Validasi Full
+            const [hari, kelas, jam] = cellId.split('-');
             const result = validateMove(hari, kelas, jam, data.mapelId, guruId);
             const cell = document.getElementById(cellId);
             
             if(result.status) {
-                alert(`TABRAKAN TERDETEKSI:\n${result.msg}`);
+                alert(`TABRAKAN: ${result.msg}`);
                 cell.classList.add('conflict');
                 selectEl.classList.add('bg-red-100');
             } else {
                 cell.classList.remove('conflict');
                 selectEl.classList.remove('bg-red-100');
-                // Kita juga perlu cek ulang 'korban' lain jika konflik selesai (tapi ini advance, skip dulu)
             }
         }
 
@@ -307,14 +320,14 @@
             else cell.classList.remove('conflict');
         }
 
+        // --- CORE VALIDATION LOGIC ---
         function validateMove(day, currentClass, timeSlot, mapelId, guruId) {
             const currentMapelObj = mapelData.find(m => m.id == mapelId);
             const mapelName = currentMapelObj ? currentMapelObj.nama.toLowerCase() : "";
-            const currentAngkatan = currentClass.charAt(0); // 7, 8, atau 9
+            const currentAngkatan = currentClass.charAt(0); 
 
-            // Loop seluruh kelas lain di jam yang sama
             for (let otherClass of kelasList) {
-                if (otherClass === currentClass) continue; // Skip diri sendiri
+                if (otherClass === currentClass) continue; 
 
                 const otherKey = `${day}-${otherClass}-${timeSlot}`;
                 const otherData = jadwalFix[otherKey];
@@ -323,43 +336,41 @@
                     const otherMapelObj = mapelData.find(m => m.id == otherData.mapelId);
                     const otherMapelName = otherMapelObj ? otherMapelObj.nama.toLowerCase() : "";
 
-                    // ATURAN 1: GURU TIDAK BOLEH TABRAKAN
-                    // Cek jika guru sudah dipilih (tidak null) dan sama
+                    // 1. GURU TIDAK BOLEH TABRAKAN
                     if (guruId && otherData.guruId && guruId == otherData.guruId) {
-                        return { status: true, msg: `Guru ini sedang mengajar di kelas ${otherClass} pada jam yang sama.` };
+                        return { status: true, msg: `Guru yang sama sedang mengajar di kelas ${otherClass}.` };
                     }
 
-                    // ATURAN 2: MAPEL LAB (Informatika, IPA, Seni, B.Bali) TIDAK BOLEH TABRAKAN DI SELURUH ANGKATAN
-                    // Cek apakah mapel ini termasuk restricted
+                    // 2. LAB TIDAK BOLEH TABRAKAN (Global)
                     const isRestricted = labSubjects.some(sub => mapelName.includes(sub));
                     if (isRestricted && otherMapelName === mapelName) {
-                        return { status: true, msg: `Mapel '${currentMapelObj.nama}' (Lab/Khusus) sedang dipakai kelas ${otherClass}. Tidak boleh bersamaan.` };
+                        return { status: true, msg: `Ruang Lab/Khusus untuk mapel ini sedang dipakai oleh kelas ${otherClass}.` };
                     }
 
-                    // ATURAN 3: ANGKATAN TIDAK BOLEH TABRAKAN MAPEL (Kecuali PJOK)
-                    // Cek jika kelas lain adalah satu angkatan (misal 7A vs 7B)
+                    // 3. ANGKATAN TIDAK BOLEH MAPEL SAMA (Kecuali PJOK & Doa Pagi)
                     if (otherClass.startsWith(currentAngkatan)) {
-                        // Jika mapel sama
                         if (mapelName === otherMapelName) {
-                            // Kecuali PJOK
-                            if (!mapelName.includes('pjok') && !mapelName.includes('olahraga')) {
-                                return { status: true, msg: `Kelas ${otherClass} (Satu Angkatan) sedang belajar ${currentMapelObj.nama}. Harus beda mapel.` };
+                            // Cek Pengecualian
+                            const exceptions = ['pjok', 'olahraga', 'doa', 'doa pagi'];
+                            const isException = exceptions.some(exc => mapelName.includes(exc));
+
+                            if (!isException) {
+                                return { status: true, msg: `Kelas ${otherClass} (satu angkatan) sedang mempelajari mapel yang sama. Ganti mapel lain.` };
                             }
                         }
                     }
                 }
             }
-
             return { status: false, msg: "Aman" };
         }
 
         function simpanJadwalFix() {
             localStorage.setItem('jadwal_fix', JSON.stringify(jadwalFix));
-            alert('Jadwal berhasil disimpan!');
+            alert('Jadwal tersimpan.');
         }
 
         function resetJadwal() {
-            if(confirm('Hapus semua jadwal?')) {
+            if(confirm('Hapus semua?')) {
                 localStorage.removeItem('jadwal_fix');
                 location.reload();
             }
