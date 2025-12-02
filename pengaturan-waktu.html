@@ -1,270 +1,122 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengaturan Waktu - EduSched</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-    </style>
-</head>
-<body class="bg-gray-100">
+<script type="module">
+    import { db, ref, set, onValue } from './config.js';
 
-    <div class="flex h-screen overflow-hidden">
-        
-        <aside class="w-64 bg-blue-900 text-white flex-shrink-0 hidden md:flex flex-col">
-            <div class="p-6 text-center border-b border-blue-800">
-                <h1 class="text-2xl font-bold"><i class="fas fa-calendar-alt mr-2"></i>EduSched</h1>
-                <p class="text-xs text-blue-300 mt-1">Sistem Penjadwalan Pelajaran</p>
-            </div>
-            <nav class="flex-1 p-4 space-y-2">
-                <a href="index.html" class="flex items-center p-3 text-blue-100 hover:bg-blue-800 rounded-lg transition">
-                    <i class="fas fa-home w-8 text-center"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="data-master.html" class="flex items-center p-3 text-blue-100 hover:bg-blue-800 rounded-lg transition">
-                    <i class="fas fa-database w-8 text-center"></i>
-                    <span>Data Master</span>
-                </a>
-                <a href="pengaturan-waktu.html" class="flex items-center p-3 bg-blue-800 rounded-lg shadow-md transition hover:bg-blue-700">
-                    <i class="fas fa-clock w-8 text-center"></i>
-                    <span class="font-semibold">Pengaturan Waktu</span>
-                </a>
-                <a href="penjadwalan.html" class="flex items-center p-3 text-blue-100 hover:bg-blue-800 rounded-lg transition">
-                    <i class="fas fa-th w-8 text-center"></i>
-                    <span>Susun Jadwal</span>
-                </a>
-            </nav>
-            <div class="p-4 border-t border-blue-800">
-                <p class="text-xs text-center text-blue-400">&copy; 2025 Sekolah Anda</p>
-            </div>
-        </aside>
+    // Expose fungsi ke window agar bisa dipanggil HTML (onclick)
+    window.generateSlots = generateSlots;
+    window.recalculateChain = recalculateChain;
+    window.updateRowStyle = updateRowStyle;
+    window.simpanPengaturan = simpanPengaturan;
 
-        <div class="flex-1 flex flex-col overflow-y-auto">
-            <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
-                <h2 class="text-xl font-bold text-gray-700">Pengaturan Jam Pelajaran</h2>
-            </header>
-
-            <main class="p-6">
-                
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-magic text-blue-500 mr-2"></i>Generator Otomatis</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Slot Waktu</label>
-                            <input type="number" id="jumlah-slot" value="8" class="w-full border border-gray-300 rounded-lg p-2" min="1" max="20">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Durasi Default (Menit)</label>
-                            <input type="number" id="durasi-default" value="40" class="w-full border border-gray-300 rounded-lg p-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Jam Mulai (JP 1)</label>
-                            <input type="time" id="jam-mulai-awal" value="07:00" class="w-full border border-gray-300 rounded-lg p-2">
-                        </div>
-                    </div>
-                    <div class="mt-4 flex gap-2">
-                        <button onclick="generateSlots()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm">
-                            <i class="fas fa-sync-alt mr-1"></i> Reset & Generate Ulang
-                        </button>
-                    </div>
-                </div>
-
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-link text-green-500 mr-2"></i>Jadwal Berantai (Cascading)</h3>
-                        <button onclick="simpanPengaturan()" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg shadow-lg transition transform hover:-translate-y-0.5">
-                            <i class="fas fa-save mr-1"></i> SIMPAN
-                        </button>
-                    </div>
-
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-gray-800 text-white uppercase text-sm leading-normal">
-                                    <th class="py-3 px-4 text-center w-16">JP</th>
-                                    <th class="py-3 px-4 text-center">Mulai</th>
-                                    <th class="py-3 px-4 text-center w-24">Durasi (Menit)</th>
-                                    <th class="py-3 px-4 text-center">Selesai</th>
-                                    <th class="py-3 px-4 text-center">Tipe</th>
-                                </tr>
-                            </thead>
-                            <tbody id="slot-container" class="text-gray-600 text-sm">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </main>
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            loadPengaturan();
-        });
-
-        // 1. GENERATE AWAL
-        function generateSlots() {
-            const jumlah = parseInt(document.getElementById('jumlah-slot').value);
-            const durasi = parseInt(document.getElementById('durasi-default').value);
-            const jamAwal = document.getElementById('jam-mulai-awal').value; 
-            
+    // Load Data saat pertama buka
+    onValue(ref(db, 'pengaturan'), (snapshot) => {
+        const settings = snapshot.val();
+        if (settings) {
+            document.getElementById('jumlah-slot').value = settings.jumlahSlot;
             const container = document.getElementById('slot-container');
             container.innerHTML = '';
-
-            let currentTime = new Date(`2000-01-01T${jamAwal}`);
-
-            for (let i = 1; i <= jumlah; i++) {
-                // Kalkulasi Selesai
-                let endTime = new Date(currentTime.getTime() + durasi * 60000);
-                
-                let startStr = formatTime(currentTime);
-                let endStr = formatTime(endTime);
-
-                createRow(i, startStr, durasi, endStr, 'pelajaran');
-                
-                currentTime = endTime;
-            }
-        }
-
-        function createRow(no, start, duration, end, type) {
-            const container = document.getElementById('slot-container');
-            const tr = document.createElement('tr');
-            
-            const bgClass = type === 'istirahat' ? 'bg-orange-50' : 'bg-white';
-            
-            // Baris pertama input Start-nya aktif, baris selanjutnya Readonly (visual saja, tetap bisa diedit tapi akan tertimpa jika atasnya berubah)
-            const isFirst = no === 1;
-            const readOnlyClass = isFirst ? '' : 'bg-gray-100 text-gray-500 cursor-not-allowed';
-
-            tr.className = `border-b border-gray-200 transition ${bgClass}`;
-            tr.innerHTML = `
-                <td class="py-3 px-4 text-center font-bold text-gray-500">${no}</td>
-                <td class="py-3 px-4 text-center">
-                    <input type="time" class="input-start border border-gray-300 rounded p-1 w-32 text-center ${readOnlyClass}" 
-                           value="${start}" onchange="recalculateChain(this, 'start')">
-                </td>
-                <td class="py-3 px-4 text-center">
-                    <input type="number" class="input-duration border border-gray-300 rounded p-1 w-24 text-center font-bold text-blue-600" 
-                           value="${duration}" onchange="recalculateChain(this, 'duration')">
-                </td>
-                <td class="py-3 px-4 text-center">
-                    <input type="time" class="input-end border border-gray-300 rounded p-1 w-32 text-center bg-gray-50" 
-                           value="${end}" readonly>
-                </td>
-                <td class="py-3 px-4 text-center">
-                    <select class="input-type border border-gray-300 rounded p-1 w-full focus:outline-none focus:ring-1 focus:ring-blue-400" onchange="updateRowStyle(this)">
-                        <option value="pelajaran" ${type === 'pelajaran' ? 'selected' : ''}>Pelajaran</option>
-                        <option value="istirahat" ${type === 'istirahat' ? 'selected' : ''}>Istirahat</option>
-                    </select>
-                </td>
-            `;
-            container.appendChild(tr);
-        }
-
-        // 2. LOGIKA CASCADING / BERANTAI
-        // Fungsi ini dipanggil saat Start atau Durasi berubah
-        function recalculateChain(input, source) {
-            let currentRow = input.closest('tr');
-            
-            // Step 1: Hitung ulang 'Selesai' untuk baris ini
-            updateRowEndTime(currentRow);
-
-            // Step 2: Trigger update berantai ke bawah
-            updateNextRows(currentRow);
-        }
-
-        function updateRowEndTime(row) {
-            const startStr = row.querySelector('.input-start').value;
-            const duration = parseInt(row.querySelector('.input-duration').value) || 0;
-            const endInput = row.querySelector('.input-end');
-
-            if(startStr) {
-                const startTime = new Date(`2000-01-01T${startStr}`);
-                const endTime = new Date(startTime.getTime() + duration * 60000);
-                endInput.value = formatTime(endTime);
-            }
-        }
-
-        function updateNextRows(currentRow) {
-            let nextRow = currentRow.nextElementSibling;
-            
-            // Jika tidak ada baris berikutnya, berhenti
-            if (!nextRow) return;
-
-            // Ambil waktu selesai baris saat ini
-            const currentEnd = currentRow.querySelector('.input-end').value;
-            
-            // Set waktu mulai baris berikutnya = waktu selesai baris ini
-            const nextStartInput = nextRow.querySelector('.input-start');
-            nextStartInput.value = currentEnd;
-
-            // Hitung ulang waktu selesai baris berikutnya (karena start berubah)
-            updateRowEndTime(nextRow);
-
-            // Lanjut ke baris setelahnya (Rekursif)
-            updateNextRows(nextRow);
-        }
-
-        // Helper Styles
-        function updateRowStyle(select) {
-            const row = select.closest('tr');
-            if(select.value === 'istirahat') {
-                row.className = row.className.replace('bg-white', 'bg-orange-50');
-            } else {
-                row.className = row.className.replace('bg-orange-50', 'bg-white');
-            }
-        }
-
-        function formatTime(dateObj) {
-            let hours = dateObj.getHours().toString().padStart(2, '0');
-            let minutes = dateObj.getMinutes().toString().padStart(2, '0');
-            return `${hours}:${minutes}`;
-        }
-
-        // 3. STORAGE
-        function simpanPengaturan() {
-            const rows = document.querySelectorAll('#slot-container tr');
-            const dataSlot = [];
-            
-            rows.forEach((row, index) => {
-                const start = row.querySelector('.input-start').value;
-                const duration = row.querySelector('.input-duration').value;
-                const end = row.querySelector('.input-end').value;
-                const type = row.querySelector('.input-type').value;
-
-                dataSlot.push({ no: index + 1, start, duration, end, type });
+            settings.slots.forEach(slot => {
+                createRow(slot.no, slot.start, slot.duration, slot.end, slot.type);
             });
-
-            const settings = {
-                jumlahSlot: document.getElementById('jumlah-slot').value,
-                slots: dataSlot
-            };
-
-            localStorage.setItem('jadwal_pengaturan', JSON.stringify(settings));
-            alert('Pengaturan waktu disimpan!');
+        } else {
+            generateSlots(); // Default jika kosong
         }
+    });
 
-        function loadPengaturan() {
-            const savedSettings = localStorage.getItem('jadwal_pengaturan');
-            if (savedSettings) {
-                const settings = JSON.parse(savedSettings);
-                document.getElementById('jumlah-slot').value = settings.jumlahSlot;
-                
-                const container = document.getElementById('slot-container');
-                container.innerHTML = '';
+    function generateSlots() {
+        const jumlah = parseInt(document.getElementById('jumlah-slot').value);
+        const durasi = parseInt(document.getElementById('durasi-default').value);
+        const jamAwal = document.getElementById('jam-mulai-awal').value; 
+        
+        const container = document.getElementById('slot-container');
+        container.innerHTML = '';
+        let currentTime = new Date(`2000-01-01T${jamAwal}`);
 
-                settings.slots.forEach(slot => {
-                    createRow(slot.no, slot.start, slot.duration, slot.end, slot.type);
-                });
-            } else {
-                generateSlots();
-            }
+        for (let i = 1; i <= jumlah; i++) {
+            let endTime = new Date(currentTime.getTime() + durasi * 60000);
+            createRow(i, formatTime(currentTime), durasi, formatTime(endTime), 'pelajaran');
+            currentTime = endTime;
         }
-    </script>
-</body>
-</html>
+    }
+
+    function createRow(no, start, duration, end, type) {
+        const container = document.getElementById('slot-container');
+        const tr = document.createElement('tr');
+        const bgClass = type === 'istirahat' ? 'bg-orange-50' : 'bg-white';
+        const readOnlyClass = no === 1 ? '' : 'bg-gray-100 text-gray-500 cursor-not-allowed';
+
+        tr.className = `border-b border-gray-200 transition ${bgClass}`;
+        tr.innerHTML = `
+            <td class="py-3 px-4 text-center font-bold text-gray-500">${no}</td>
+            <td class="py-3 px-4 text-center">
+                <input type="time" class="input-start border border-gray-300 rounded p-1 w-32 text-center ${readOnlyClass}" value="${start}" onchange="recalculateChain(this)">
+            </td>
+            <td class="py-3 px-4 text-center">
+                <input type="number" class="input-duration border border-gray-300 rounded p-1 w-24 text-center font-bold text-blue-600" value="${duration}" onchange="recalculateChain(this)">
+            </td>
+            <td class="py-3 px-4 text-center">
+                <input type="time" class="input-end border border-gray-300 rounded p-1 w-32 text-center bg-gray-50" value="${end}" readonly>
+            </td>
+            <td class="py-3 px-4 text-center">
+                <select class="input-type border border-gray-300 rounded p-1 w-full" onchange="updateRowStyle(this)">
+                    <option value="pelajaran" ${type === 'pelajaran' ? 'selected' : ''}>Pelajaran</option>
+                    <option value="istirahat" ${type === 'istirahat' ? 'selected' : ''}>Istirahat</option>
+                </select>
+            </td>
+        `;
+        container.appendChild(tr);
+    }
+
+    function recalculateChain(input) {
+        let currentRow = input.closest('tr');
+        updateRowEndTime(currentRow);
+        updateNextRows(currentRow);
+    }
+
+    function updateRowEndTime(row) {
+        const startStr = row.querySelector('.input-start').value;
+        const duration = parseInt(row.querySelector('.input-duration').value) || 0;
+        if(startStr) {
+            const startTime = new Date(`2000-01-01T${startStr}`);
+            const endTime = new Date(startTime.getTime() + duration * 60000);
+            row.querySelector('.input-end').value = formatTime(endTime);
+        }
+    }
+
+    function updateNextRows(currentRow) {
+        let nextRow = currentRow.nextElementSibling;
+        if (!nextRow) return;
+        const currentEnd = currentRow.querySelector('.input-end').value;
+        const nextStartInput = nextRow.querySelector('.input-start');
+        nextStartInput.value = currentEnd;
+        updateRowEndTime(nextRow);
+        updateNextRows(nextRow);
+    }
+
+    function updateRowStyle(select) {
+        const row = select.closest('tr');
+        row.className = select.value === 'istirahat' ? row.className.replace('bg-white', 'bg-orange-50') : row.className.replace('bg-orange-50', 'bg-white');
+    }
+
+    function formatTime(dateObj) {
+        return `${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
+    }
+
+    function simpanPengaturan() {
+        const rows = document.querySelectorAll('#slot-container tr');
+        const dataSlot = [];
+        rows.forEach((row, index) => {
+            dataSlot.push({
+                no: index + 1,
+                start: row.querySelector('.input-start').value,
+                duration: row.querySelector('.input-duration').value,
+                end: row.querySelector('.input-end').value,
+                type: row.querySelector('.input-type').value
+            });
+        });
+        // SIMPAN KE FIREBASE
+        set(ref(db, 'pengaturan'), {
+            jumlahSlot: document.getElementById('jumlah-slot').value,
+            slots: dataSlot
+        }).then(() => alert('Pengaturan tersimpan di Cloud!'));
+    }
+</script>
