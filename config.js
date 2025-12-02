@@ -1,8 +1,10 @@
-// Import fungsi yang dibutuhkan dari SDK
+// config.js
+
+// 1. Import Library dari CDN (Wajib pakai ini agar jalan di browser tanpa Node.js)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// --- GANTI BAGIAN INI DENGAN DATA DARI FIREBASE CONSOLE ANDA ---
+// 2. Konfigurasi Firebase (Data dari Anda)
 const firebaseConfig = {
   apiKey: "AIzaSyDrurUzpsUoTg2pj1IGZLsftzRnPiRJD4I",
   authDomain: "jadwal-smp-albanna.firebaseapp.com",
@@ -12,11 +14,12 @@ const firebaseConfig = {
   messagingSenderId: "479463025402",
   appId: "1:479463025402:web:0fb644f0ba8bfcf38bf743"
 };
-// ---------------------------------------------------------------
 
-// Inisialisasi Firebase
+// 3. Inisialisasi Firebase App
 const app = initializeApp(firebaseConfig);
+
+// 4. Inisialisasi Realtime Database
 const db = getDatabase(app);
 
-// Export agar bisa dipakai di file lain
+// 5. Export variables agar bisa di-import di file lain
 export { db, ref, set, push, onValue, remove, update };
