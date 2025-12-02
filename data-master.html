@@ -15,6 +15,7 @@
 
     <div class="flex h-screen overflow-hidden">
         
+        <!-- SIDEBAR -->
         <aside class="w-64 bg-blue-900 text-white flex-shrink-0 hidden md:flex flex-col">
             <div class="p-6 text-center border-b border-blue-800">
                 <h1 class="text-2xl font-bold"><i class="fas fa-calendar-alt mr-2"></i>EduSched</h1>
@@ -39,11 +40,13 @@
                 </a>
             </nav>
             <div class="p-4 border-t border-blue-800">
-                <p class="text-xs text-center text-blue-400">&copy; 2025 Sekolah Anda</p>
+                <p class="text-xs text-center text-blue-400">&copy; 2025 SMP ALBANNA</p>
             </div>
         </aside>
 
+        <!-- MAIN CONTENT -->
         <div class="flex-1 flex flex-col overflow-y-auto">
+            <!-- Header -->
             <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
                 <h2 class="text-xl font-bold text-gray-700">Data Master (Cloud)</h2>
                 <div class="flex items-center gap-2">
@@ -55,17 +58,27 @@
             <main class="p-6">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
+                    <!-- PANEL KIRI: INPUT MATA PELAJARAN -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <div class="flex items-center justify-between mb-4 border-b pb-2">
                             <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-book text-blue-500 mr-2"></i>Mata Pelajaran</h3>
                             <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full" id="count-mapel">Loading...</span>
                         </div>
                         
+                        <!-- Form Mapel -->
                         <form id="form-mapel" class="mb-6 bg-gray-50 p-4 rounded-lg">
-                            <div class="mb-3">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Mata Pelajaran</label>
-                                <input type="text" id="nama-mapel" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Contoh: Matematika" required>
+                            <div class="grid grid-cols-3 gap-4 mb-3">
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Mata Pelajaran</label>
+                                    <input type="text" id="nama-mapel" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Contoh: Matematika" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Jatah Jam</label>
+                                    <input type="number" id="quota-mapel" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 text-center" placeholder="Jml" min="1" required>
+                                    <p class="text-[10px] text-gray-500 mt-1">Per Kelas/Minggu</p>
+                                </div>
                             </div>
+                            
                             <div class="mb-3">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Warna Label</label>
                                 <div class="flex gap-2 items-center">
@@ -78,6 +91,7 @@
                             </button>
                         </form>
 
+                        <!-- List Mapel -->
                         <div class="overflow-y-auto max-h-96">
                             <ul id="list-mapel" class="space-y-2">
                                 <li class="text-center text-gray-400 py-4 text-sm">Memuat data dari cloud...</li>
@@ -85,12 +99,14 @@
                         </div>
                     </div>
 
+                    <!-- PANEL KANAN: INPUT GURU -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <div class="flex items-center justify-between mb-4 border-b pb-2">
                             <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-chalkboard-teacher text-green-500 mr-2"></i>Data Guru</h3>
                             <span class="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full" id="count-guru">Loading...</span>
                         </div>
 
+                        <!-- Form Guru -->
                         <form id="form-guru" class="mb-6 bg-gray-50 p-4 rounded-lg">
                             <div class="mb-3">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap Guru</label>
@@ -105,6 +121,7 @@
                             </button>
                         </form>
 
+                        <!-- List Guru -->
                         <div class="overflow-y-auto max-h-96">
                             <ul id="list-guru" class="space-y-2">
                                 <li class="text-center text-gray-400 py-4 text-sm">Memuat data dari cloud...</li>
@@ -117,39 +134,37 @@
         </div>
     </div>
 
+    <!-- FIREBASE LOGIC -->
     <script type="module">
-        // Import fungsi dari config.js
         import { db, ref, push, onValue, remove } from './config.js';
 
         // ======================= LOGIKA MATA PELAJARAN =======================
         const formMapel = document.getElementById('form-mapel');
         
-        // 1. Simpan Data (Create)
         formMapel.addEventListener('submit', (e) => {
             e.preventDefault();
             const nama = document.getElementById('nama-mapel').value;
+            const quota = document.getElementById('quota-mapel').value; // Ambil quota
             const warna = document.getElementById('warna-mapel').value;
 
-            // Push ke Firebase (akan dibuatkan ID unik otomatis)
             push(ref(db, 'mapel'), {
                 nama: nama,
+                quota: parseInt(quota), // Simpan sebagai angka
                 warna: warna
             }).then(() => {
-                formMapel.reset(); // Reset form jika sukses
+                formMapel.reset();
             }).catch((error) => {
                 alert("Gagal menyimpan: " + error.message);
             });
         });
 
-        // 2. Baca Data Realtime (Read)
         onValue(ref(db, 'mapel'), (snapshot) => {
             const listEl = document.getElementById('list-mapel');
             const data = snapshot.val();
-            listEl.innerHTML = ''; // Bersihkan list lama
+            listEl.innerHTML = '';
 
             let count = 0;
             if (data) {
-                // Loop object dari Firebase
                 Object.keys(data).forEach((key) => {
                     const item = data[key];
                     count++;
@@ -157,9 +172,12 @@
                     const li = document.createElement('li');
                     li.className = 'flex justify-between items-center bg-white border border-gray-100 p-3 rounded shadow-sm hover:shadow-md transition';
                     li.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <div class="w-6 h-6 rounded-full shadow-sm border border-gray-200" style="background-color: ${item.warna};"></div>
-                            <span class="font-medium text-gray-700">${item.nama}</span>
+                        <div class="flex items-center gap-3 w-full">
+                            <div class="w-6 h-6 rounded-full shadow-sm border border-gray-200 flex-shrink-0" style="background-color: ${item.warna};"></div>
+                            <div class="flex flex-col">
+                                <span class="font-medium text-gray-700">${item.nama}</span>
+                                <span class="text-[10px] text-gray-500">Jatah: <b>${item.quota || 0} JP</b> / kelas</span>
+                            </div>
                         </div>
                         <button id="del-mapel-${key}" class="text-red-400 hover:text-red-600 transition p-2">
                             <i class="fas fa-trash-alt"></i>
@@ -167,7 +185,6 @@
                     `;
                     listEl.appendChild(li);
 
-                    // Tambahkan Event Listener Delete ke tombol yang baru dibuat
                     document.getElementById(`del-mapel-${key}`).addEventListener('click', () => {
                         if(confirm(`Hapus mapel "${item.nama}"?`)) {
                             remove(ref(db, `mapel/${key}`));
@@ -184,7 +201,6 @@
         // ======================= LOGIKA GURU =======================
         const formGuru = document.getElementById('form-guru');
 
-        // 1. Simpan Data (Create)
         formGuru.addEventListener('submit', (e) => {
             e.preventDefault();
             const nama = document.getElementById('nama-guru').value;
@@ -200,7 +216,6 @@
             });
         });
 
-        // 2. Baca Data Realtime (Read)
         onValue(ref(db, 'guru'), (snapshot) => {
             const listEl = document.getElementById('list-guru');
             const data = snapshot.val();
@@ -227,7 +242,6 @@
                     `;
                     listEl.appendChild(li);
 
-                    // Event Listener Delete
                     document.getElementById(`del-guru-${key}`).addEventListener('click', () => {
                         if(confirm(`Hapus guru "${item.nama}"?`)) {
                             remove(ref(db, `guru/${key}`));
