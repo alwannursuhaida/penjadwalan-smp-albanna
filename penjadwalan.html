@@ -39,7 +39,6 @@
                 <span class="text-xs text-blue-200">Online</span>
             </div>
             
-            <!-- Selector Hari -->
             <label class="font-semibold text-xs text-blue-200">Lihat Hari:</label>
             <select id="select-hari" onchange="renderJadwalView()" class="text-gray-800 rounded p-1 text-sm font-bold border-none outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="senin">Senin</option>
@@ -49,7 +48,6 @@
                 <option value="jumat">Jumat</option>
             </select>
             
-            <!-- Tombol Cek Kuota (New) -->
             <button onclick="checkQuotaCompleteness()" class="bg-yellow-500 hover:bg-yellow-600 px-3 py-1 rounded text-sm font-bold shadow transition ml-2 text-blue-900">
                 <i class="fas fa-clipboard-check mr-1"></i> Cek Kuota
             </button>
@@ -75,10 +73,13 @@
             <div class="p-2 border-t bg-yellow-50 text-[10px] text-yellow-800 leading-tight">
                 <b>Aturan Validasi:</b><br>
                 1. <b>Kuota Pas</b> (Tidak Kurang/Lebih)<br>
-                2. Guru (Global Collision)<br>
-                3. Lab (Info, IPA, dll)<br>
-                4. PJOK (Beda Angkatan = Merah)<br>
-                5. Angkatan (Mapel Sama = Merah)
+                2. <b>Guru</b> (Tabrakan = Merah)<br>
+                <span class="text-green-600 ml-2">*Kecuali Guru Quran (1 Angkatan)</span><br>
+                3. <b>PJOK & Quran</b>:<br>
+                <span class="ml-2">- Beda Angkatan = Merah</span><br>
+                <span class="ml-2">- Satu Angkatan = Aman</span><br>
+                4. Lab (Info, IPA, dll)<br>
+                5. Mapel Umum (Satu Angkatan = Merah)
             </div>
         </aside>
 
@@ -118,7 +119,6 @@
         window.allowDrop = (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); };
         window.leaveDrop = (e) => { e.currentTarget.classList.remove('drag-over'); };
         
-        // FUNGSI DROP DENGAN VALIDASI KUOTA "TIDAK BOLEH LEBIH"
         window.drop = (e, hari, kelas, jam) => {
             e.preventDefault();
             e.currentTarget.classList.remove('drag-over');
@@ -128,30 +128,29 @@
             const mapel = JSON.parse(raw);
             const cellId = `${hari}-${kelas}-${jam}`;
 
-            // --- 1. VALIDASI KUOTA (TIDAK BOLEH LEBIH) ---
+            // 1. VALIDASI KUOTA
             const currentUsage = countMapelUsage(kelas, mapel.id);
-            const limit = mapel.quota || 99; // Default jika tidak diset
+            const limit = mapel.quota || 99;
 
             if (currentUsage >= limit) {
-                alert(`GAGAL DROP: Jatah "${mapel.nama}" untuk kelas ${kelas} SUDAH HABIS.\nTerpakai: ${currentUsage} JP\nBatas: ${limit} JP`);
-                return; // Stop proses drop
+                alert(`GAGAL DROP: Jatah "${mapel.nama}" untuk kelas ${kelas} SUDAH HABIS (${currentUsage}/${limit} JP).`);
+                return;
             }
 
-            // --- 2. VALIDASI TABRAKAN LAINNYA ---
+            // 2. VALIDASI TABRAKAN
             const conflict = validateMove(hari, kelas, jam, mapel.id, null);
             if(conflict.status) {
                 alert(`PERINGATAN: ${conflict.msg}`);
                 return; 
             }
 
-            // --- 3. SIMPAN KE CLOUD ---
+            // 3. SIMPAN
             set(ref(db, `jadwal/${cellId}`), {
                 mapelId: mapel.id,
                 guruId: null
             });
         };
 
-        // FUNGSI CEK KUOTA "TIDAK BOLEH KURANG" (MANUAL CHECK)
         window.checkQuotaCompleteness = () => {
             let report = [];
             let isComplete = true;
@@ -161,31 +160,24 @@
                 mapelData.forEach(mapel => {
                     const usage = countMapelUsage(kelas, mapel.id);
                     const limit = mapel.quota || 0;
-                    
                     if (usage < limit) {
                         const diff = limit - usage;
                         missingMapel.push(`${mapel.nama} (-${diff})`);
                     }
                 });
-
                 if (missingMapel.length > 0) {
                     report.push(`Kelas ${kelas}: Kurang ${missingMapel.join(', ')}`);
                     isComplete = false;
                 }
             });
 
-            if (isComplete) {
-                alert("SELAMAT! Semua jadwal sudah lengkap sesuai kuota.");
-            } else {
-                alert("LAPORAN KEKURANGAN JADWAL:\n\n" + report.join('\n'));
-            }
+            if (isComplete) alert("SELAMAT! Semua jadwal sudah lengkap sesuai kuota.");
+            else alert("LAPORAN KEKURANGAN JADWAL:\n\n" + report.join('\n'));
         };
 
-        // Helper: Hitung penggunaan mapel di satu kelas (Lintas Hari)
         function countMapelUsage(targetKelas, targetMapelId) {
             let count = 0;
             Object.keys(jadwalFix).forEach(key => {
-                // key format: hari-kelas-jam
                 const [h, k, j] = key.split('-');
                 if (k === targetKelas && jadwalFix[key].mapelId === targetMapelId) {
                     count++;
@@ -208,6 +200,7 @@
             const conflict = validateMove(hari, kelas, jam, currentData.mapelId, guruId);
             if(conflict.status) {
                 alert(conflict.msg);
+                // selectEl.value = ""; // Opsional
                 return;
             }
 
@@ -222,7 +215,7 @@
             if(confirm('Hapus SEMUA jadwal di Cloud? TINDAKAN INI TIDAK BISA DIBATALKAN.')) remove(ref(db, 'jadwal'));
         }
 
-        // --- LOAD DATA (REALTIME) ---
+        // --- LOAD DATA ---
         onValue(ref(db, 'mapel'), (snapshot) => {
             const data = snapshot.val();
             mapelData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
@@ -247,7 +240,7 @@
             if(isDataLoaded) hydrateCells(); 
         });
 
-        // --- RENDERING FUNCTIONS ---
+        // --- RENDERING ---
         function renderSourceMapel() {
             const container = document.getElementById('source-container');
             if(!container) return;
@@ -311,17 +304,13 @@
             if(!selectHari) return; 
 
             const hari = selectHari.value;
-
-            // Bersihkan dulu semua cell pelajaran
             document.querySelectorAll('td[id]').forEach(td => { td.innerHTML = ''; td.classList.remove('conflict'); });
 
-            // Isi data
             Object.keys(jadwalFix).forEach(cellId => {
                 if(cellId.startsWith(hari)) {
                     const data = jadwalFix[cellId];
                     if(document.getElementById(cellId)) {
                         renderCellContent(cellId, data.mapelId, data.guruId);
-                        
                         const [h, k, j] = cellId.split('-');
                         const res = validateMove(h, k, j, data.mapelId, data.guruId);
                         if(res.status) document.getElementById(cellId).classList.add('conflict');
@@ -360,7 +349,7 @@
             `;
         }
 
-        // === VALIDASI LENGKAP ===
+        // === VALIDASI LENGKAP (UPDATED) ===
         function validateMove(day, currentClass, timeSlot, mapelId, guruId) {
             const currentMapelObj = mapelData.find(m => m.id === mapelId);
             const mapelName = currentMapelObj ? currentMapelObj.nama.toLowerCase() : "";
@@ -377,24 +366,46 @@
                     const otherMapelName = otherMapelObj ? otherMapelObj.nama.toLowerCase() : "";
                     const otherAngkatan = otherClass.charAt(0);
 
-                    // 1. GURU (Global Collision)
-                    if (guruId && otherData.guruId && guruId === otherData.guruId) 
-                        return { status: true, msg: `Guru mengajar di ${otherClass}.` };
+                    // 1. GURU CHECK
+                    if (guruId && otherData.guruId && guruId === otherData.guruId) {
+                        // PENGECEKAN KHUSUS GURU QURAN
+                        // Jika Guru Quran & Satu Angkatan -> BOLEH (Team Teaching)
+                        const isQuran = mapelName.includes('quran') || mapelName.includes('al-quran') || mapelName.includes('btq');
+                        const isOtherQuran = otherMapelName.includes('quran') || otherMapelName.includes('al-quran') || otherMapelName.includes('btq');
 
-                    // 2. LAB (Global Collision)
+                        if (isQuran && isOtherQuran && currentAngkatan === otherAngkatan) {
+                            // Aman, continue checking other rules
+                        } else {
+                            return { status: true, msg: `Guru mengajar di ${otherClass}.` };
+                        }
+                    }
+
+                    // 2. LAB CHECK
                     const isRestricted = labSubjects.some(sub => mapelName.includes(sub));
                     if (isRestricted && otherMapelName === mapelName) 
                         return { status: true, msg: `Lab dipakai ${otherClass}.` };
 
-                    // 3. PJOK (Lintas Angkatan Dilarang)
+                    // 3. PJOK & QURAN (CHECK LINTAS ANGKATAN)
+                    // Aturan: Satu angkatan boleh, Beda angkatan gaboleh
                     const isPjok = mapelName.includes('pjok') || mapelName.includes('olahraga');
                     const isOtherPjok = otherMapelName.includes('pjok') || otherMapelName.includes('olahraga');
+                    
+                    const isQuran = mapelName.includes('quran') || mapelName.includes('al-quran') || mapelName.includes('btq');
+                    const isOtherQuran = otherMapelName.includes('quran') || otherMapelName.includes('al-quran') || otherMapelName.includes('btq');
+
+                    // Cek PJOK
                     if (isPjok && isOtherPjok) {
                         if (currentAngkatan !== otherAngkatan) return { status: true, msg: `PJOK bentrok angkatan.` };
                         continue; 
                     }
 
-                    // 4. ANGKATAN (Mapel Sama Dilarang, Kecuali Doa)
+                    // Cek QURAN
+                    if (isQuran && isOtherQuran) {
+                        if (currentAngkatan !== otherAngkatan) return { status: true, msg: `Al-Quran bentrok angkatan.` };
+                        continue;
+                    }
+
+                    // 4. MAPEL UMUM (Satu Angkatan Gaboleh Sama, Kecuali Doa)
                     if (currentAngkatan === otherAngkatan && mapelName === otherMapelName) {
                         if (!mapelName.includes('doa')) return { status: true, msg: `Mapel sama di ${otherClass}.` };
                     }
