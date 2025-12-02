@@ -55,11 +55,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Slot Waktu</label>
-                            <input type="number" id="jumlah-slot" value="8" class="w-full border border-gray-300 rounded-lg p-2" min="1" max="15">
+                            <input type="number" id="jumlah-slot" value="8" class="w-full border border-gray-300 rounded-lg p-2" min="1" max="20">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Durasi per Jam (Menit)</label>
-                            <input type="number" id="durasi-default" value="45" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Untuk auto-fill">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Durasi Default (Menit)</label>
+                            <input type="number" id="durasi-default" value="40" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Untuk auto-fill">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Jam Mulai Awal</label>
@@ -70,7 +70,7 @@
                         <button onclick="generateSlots()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm">
                             <i class="fas fa-sync-alt mr-1"></i> Generate Slot & Auto Fill
                         </button>
-                        <span class="text-xs text-gray-500 self-center">*Menekan tombol ini akan mereset tabel di bawah.</span>
+                        <span class="text-xs text-gray-500 self-center">*Akan mereset tabel di bawah.</span>
                     </div>
                 </div>
 
@@ -86,8 +86,9 @@
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                                    <th class="py-3 px-4 text-center w-16">No</th>
+                                    <th class="py-3 px-4 text-center w-16">JP</th>
                                     <th class="py-3 px-4 text-center">Waktu Mulai</th>
+                                    <th class="py-3 px-4 text-center w-24">Durasi (Menit)</th>
                                     <th class="py-3 px-4 text-center">Waktu Selesai</th>
                                     <th class="py-3 px-4 text-center">Tipe Slot</th>
                                 </tr>
@@ -107,11 +108,11 @@
             loadPengaturan();
         });
 
-        // Generate Slot Input secara otomatis
+        // 1. Generate Slot Secara Otomatis
         function generateSlots() {
             const jumlah = parseInt(document.getElementById('jumlah-slot').value);
             const durasi = parseInt(document.getElementById('durasi-default').value);
-            const jamAwal = document.getElementById('jam-mulai-awal').value; // Format "07:00"
+            const jamAwal = document.getElementById('jam-mulai-awal').value; 
             
             const container = document.getElementById('slot-container');
             container.innerHTML = '';
@@ -126,49 +127,124 @@
                 let startStr = formatTime(currentTime);
                 let endStr = formatTime(endTime);
 
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-gray-200 hover:bg-gray-50";
-                tr.innerHTML = `
-                    <td class="py-3 px-4 text-center font-bold text-gray-500">${i}</td>
-                    <td class="py-3 px-4 text-center">
-                        <input type="time" class="input-start border border-gray-300 rounded p-1 w-32 text-center" value="${startStr}">
-                    </td>
-                    <td class="py-3 px-4 text-center">
-                        <input type="time" class="input-end border border-gray-300 rounded p-1 w-32 text-center" value="${endStr}">
-                    </td>
-                    <td class="py-3 px-4 text-center">
-                        <select class="input-type border border-gray-300 rounded p-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
-                            <option value="pelajaran">Jam Pelajaran</option>
-                            <option value="istirahat">Istirahat</option>
-                        </select>
-                    </td>
-                `;
-                container.appendChild(tr);
+                createRow(i, startStr, durasi, endStr, 'pelajaran');
 
                 // Update current time untuk slot berikutnya
                 currentTime = endTime;
             }
         }
 
+        // 2. Fungsi Membuat Baris Tabel (HTML)
+        function createRow(no, start, duration, end, type) {
+            const container = document.getElementById('slot-container');
+            const tr = document.createElement('tr');
+            
+            // Tentukan warna baris jika istirahat
+            const bgClass = type === 'istirahat' ? 'bg-orange-50' : 'bg-white';
+            tr.className = `border-b border-gray-200 hover:bg-gray-50 transition ${bgClass}`;
+            
+            tr.innerHTML = `
+                <td class="py-3 px-4 text-center font-bold text-gray-500">${no}</td>
+                <td class="py-3 px-4 text-center">
+                    <input type="time" class="input-start border border-gray-300 rounded p-1 w-32 text-center" value="${start}" onchange="recalculateByStart(this)">
+                </td>
+                <td class="py-3 px-4 text-center">
+                    <input type="number" class="input-duration border border-gray-300 rounded p-1 w-20 text-center font-semibold text-blue-600" value="${duration}" onchange="recalculateByDuration(this)">
+                </td>
+                <td class="py-3 px-4 text-center">
+                    <input type="time" class="input-end border border-gray-300 rounded p-1 w-32 text-center" value="${end}" onchange="recalculateByEnd(this)">
+                </td>
+                <td class="py-3 px-4 text-center">
+                    <select class="input-type border border-gray-300 rounded p-1 focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" onchange="updateRowStyle(this)">
+                        <option value="pelajaran" ${type === 'pelajaran' ? 'selected' : ''}>Jam Pelajaran</option>
+                        <option value="istirahat" ${type === 'istirahat' ? 'selected' : ''}>Istirahat</option>
+                    </select>
+                </td>
+            `;
+            container.appendChild(tr);
+        }
+
+        // 3. Logika Hitung Otomatis (Reactivity)
+        
+        // A. Jika 'Waktu Mulai' berubah -> Ubah 'Waktu Selesai' (Durasi tetap)
+        function recalculateByStart(input) {
+            const row = input.closest('tr');
+            const startStr = input.value;
+            const duration = parseInt(row.querySelector('.input-duration').value) || 0;
+            
+            if(startStr) {
+                const startTime = new Date(`2000-01-01T${startStr}`);
+                const endTime = new Date(startTime.getTime() + duration * 60000);
+                row.querySelector('.input-end').value = formatTime(endTime);
+            }
+        }
+
+        // B. Jika 'Durasi' berubah -> Ubah 'Waktu Selesai' (Waktu Mulai tetap)
+        function recalculateByDuration(input) {
+            const row = input.closest('tr');
+            const startStr = row.querySelector('.input-start').value;
+            const duration = parseInt(input.value) || 0;
+
+            if(startStr) {
+                const startTime = new Date(`2000-01-01T${startStr}`);
+                const endTime = new Date(startTime.getTime() + duration * 60000);
+                row.querySelector('.input-end').value = formatTime(endTime);
+            }
+        }
+
+        // C. Jika 'Waktu Selesai' berubah -> Hitung ulang 'Durasi'
+        function recalculateByEnd(input) {
+            const row = input.closest('tr');
+            const startStr = row.querySelector('.input-start').value;
+            const endStr = input.value;
+
+            if(startStr && endStr) {
+                const startTime = new Date(`2000-01-01T${startStr}`);
+                const endTime = new Date(`2000-01-01T${endStr}`);
+                
+                // Hitung selisih menit
+                let diffMs = endTime - startTime;
+                if (diffMs < 0) diffMs += 24 * 60 * 60 * 1000; // Handle lewat tengah malam (opsional)
+                
+                const diffMins = Math.round(diffMs / 60000);
+                row.querySelector('.input-duration').value = diffMins;
+            }
+        }
+
+        // D. Update Style jika tipe berubah jadi Istirahat
+        function updateRowStyle(select) {
+            const row = select.closest('tr');
+            if(select.value === 'istirahat') {
+                row.classList.add('bg-orange-50');
+                row.classList.remove('bg-white');
+            } else {
+                row.classList.add('bg-white');
+                row.classList.remove('bg-orange-50');
+            }
+        }
+
+        // Helper: Format Date Object ke "HH:mm"
         function formatTime(dateObj) {
             let hours = dateObj.getHours().toString().padStart(2, '0');
             let minutes = dateObj.getMinutes().toString().padStart(2, '0');
             return `${hours}:${minutes}`;
         }
 
-        // Simpan ke Local Storage
+        // 4. Simpan ke Local Storage
         function simpanPengaturan() {
             const rows = document.querySelectorAll('#slot-container tr');
             const dataSlot = [];
             
             rows.forEach((row, index) => {
                 const start = row.querySelector('.input-start').value;
+                const duration = row.querySelector('.input-duration').value;
                 const end = row.querySelector('.input-end').value;
                 const type = row.querySelector('.input-type').value;
 
                 dataSlot.push({
                     no: index + 1,
                     start: start,
+                    duration: duration, // Simpan durasi juga
                     end: end,
                     type: type
                 });
@@ -180,10 +256,10 @@
             };
 
             localStorage.setItem('jadwal_pengaturan', JSON.stringify(settings));
-            alert('Pengaturan waktu berhasil disimpan! Silakan lanjut ke menu Susun Jadwal.');
+            alert('Pengaturan waktu berhasil disimpan!');
         }
 
-        // Load dari Local Storage saat halaman dibuka
+        // 5. Load dari Local Storage
         function loadPengaturan() {
             const savedSettings = localStorage.getItem('jadwal_pengaturan');
             
@@ -195,27 +271,17 @@
                 container.innerHTML = '';
 
                 settings.slots.forEach(slot => {
-                    const tr = document.createElement('tr');
-                    tr.className = "border-b border-gray-200 hover:bg-gray-50 " + (slot.type === 'istirahat' ? 'bg-orange-50' : '');
-                    tr.innerHTML = `
-                        <td class="py-3 px-4 text-center font-bold text-gray-500">${slot.no}</td>
-                        <td class="py-3 px-4 text-center">
-                            <input type="time" class="input-start border border-gray-300 rounded p-1 w-32 text-center" value="${slot.start}">
-                        </td>
-                        <td class="py-3 px-4 text-center">
-                            <input type="time" class="input-end border border-gray-300 rounded p-1 w-32 text-center" value="${slot.end}">
-                        </td>
-                        <td class="py-3 px-4 text-center">
-                            <select class="input-type border border-gray-300 rounded p-1 focus:outline-none focus:ring-2 focus:ring-blue-400 ${slot.type === 'istirahat' ? 'text-orange-600 font-bold' : 'bg-white'}">
-                                <option value="pelajaran" ${slot.type === 'pelajaran' ? 'selected' : ''}>Jam Pelajaran</option>
-                                <option value="istirahat" ${slot.type === 'istirahat' ? 'selected' : ''}>Istirahat</option>
-                            </select>
-                        </td>
-                    `;
-                    container.appendChild(tr);
+                    // Hitung durasi manual jika data lama tidak punya field duration
+                    let durasi = slot.duration;
+                    if(!durasi) {
+                         const s = new Date(`2000-01-01T${slot.start}`);
+                         const e = new Date(`2000-01-01T${slot.end}`);
+                         durasi = Math.round((e - s) / 60000);
+                    }
+
+                    createRow(slot.no, slot.start, durasi, slot.end, slot.type);
                 });
             } else {
-                // Jika belum ada data, generate default
                 generateSlots();
             }
         }
