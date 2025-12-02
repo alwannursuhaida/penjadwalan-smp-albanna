@@ -61,11 +61,11 @@
             <div id="source-container" class="flex-1 overflow-y-auto p-2 space-y-2">
                 </div>
             <div class="p-2 border-t bg-yellow-50 text-[10px] text-yellow-800 leading-tight">
-                <b>Aturan Tabrakan:</b><br>
-                1. Guru (Global)<br>
-                2. Lab/Ruang Khusus (Global)<br>
-                3. PJOK (Beda Angkatan = Dilarang)<br>
-                4. Mapel Lain (Sama Angkatan = Dilarang)
+                <b>Aturan Validasi:</b><br>
+                1. Guru (Global Collision)<br>
+                2. Lab (Info, IPA, dll)<br>
+                3. PJOK (Beda Angkatan = Merah)<br>
+                4. Angkatan (Mapel Sama = Merah)
             </div>
         </aside>
 
@@ -168,7 +168,7 @@
                     tr.innerHTML = infoWaktu;
                     kelasList.forEach(kelas => {
                         const cellId = `${hari}-${kelas}-${slot.no}`;
-                        tr.innerHTML += `<td id="${cellId}" class="border p-1 relative h-24 align-top transition hover:bg-gray-50 bg-white" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)" ondrop="drop(event, '${hari}', '${kelas}', '${slot.no}')"></td>`;
+                        tr.innerHTML += `<td id="${cellId}" class="border p-1 relative h-28 align-top transition hover:bg-gray-50 bg-white" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)" ondrop="drop(event, '${hari}', '${kelas}', '${slot.no}')"></td>`;
                     });
                 }
                 tbody.appendChild(tr);
@@ -217,24 +217,38 @@
             }
         }
 
+        // --- RENDER CELL CONTENT (MODIFIED) ---
         function renderCellContent(cellId, mapelId, currentGuruId) {
             const cell = document.getElementById(cellId);
             const mapel = mapelData.find(m => m.id == mapelId);
             if(!mapel) return;
 
-            let options = `<option value="">Guru...</option>`;
+            // Cari objek guru yang sedang dipilih untuk diambil INISIAL-nya
+            const currentGuruObj = guruData.find(g => g.id == currentGuruId);
+            const inisialGuru = currentGuruObj ? currentGuruObj.kode : '?';
+
+            // Generate Options (Menggunakan Nama Lengkap)
+            let options = `<option value="">-- Pilih Guru --</option>`;
             guruData.forEach(g => {
                 const sel = (g.id == currentGuruId) ? 'selected' : '';
-                options += `<option value="${g.id}" ${sel}>${g.kode}</option>`;
+                options += `<option value="${g.id}" ${sel}>${g.nama}</option>`; // Nama Lengkap di dropdown
             });
 
             cell.innerHTML = `
-                <div class="h-full w-full rounded p-1 text-[10px] shadow-sm flex flex-col gap-1" style="background-color: ${mapel.warna}20; border-top: 3px solid ${mapel.warna};">
-                    <div class="flex justify-between items-start">
-                        <span class="font-bold text-gray-800 leading-tight line-clamp-2" title="${mapel.nama}">${mapel.nama}</span>
+                <div class="h-full w-full rounded p-1 shadow-sm flex flex-col justify-between" style="background-color: ${mapel.warna}20; border-top: 3px solid ${mapel.warna};">
+                    
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="font-bold text-gray-800 text-[10px] leading-tight line-clamp-2" title="${mapel.nama}">${mapel.nama}</span>
                         <button onclick="hapusJadwal('${cellId}')" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
                     </div>
-                    <select onchange="onGuruChange(this, '${cellId}')" class="w-full border border-gray-300 rounded p-0.5 bg-white bg-opacity-70 text-[10px]">
+
+                    <div class="flex-1 flex items-center justify-center">
+                        <div class="text-xl font-bold text-gray-600 tracking-wider bg-white bg-opacity-50 px-2 rounded">
+                            ${currentGuruId ? inisialGuru : '<span class="text-gray-300 text-xs">...</span>'}
+                        </div>
+                    </div>
+
+                    <select onchange="onGuruChange(this, '${cellId}')" class="w-full border border-gray-300 rounded p-0.5 bg-white text-[10px] mt-1 cursor-pointer">
                         ${options}
                     </select>
                 </div>
@@ -257,7 +271,14 @@
         function onGuruChange(selectEl, cellId) {
             const guruId = selectEl.value;
             const data = jadwalFix[cellId];
+            
+            // Simpan Guru
             data.guruId = guruId;
+            
+            // Render ulang cell agar Inisial Guru di tengah berubah sesuai pilihan
+            renderCellContent(cellId, data.mapelId, guruId);
+
+            // Cek Tabrakan
             const [hari, kelas, jam] = cellId.split('-');
             const result = validateMove(hari, kelas, jam, data.mapelId, guruId);
             const cell = document.getElementById(cellId);
@@ -265,10 +286,8 @@
             if(result.status) {
                 alert(`TABRAKAN: ${result.msg}`);
                 cell.classList.add('conflict');
-                selectEl.classList.add('bg-red-100');
             } else {
                 cell.classList.remove('conflict');
-                selectEl.classList.remove('bg-red-100');
             }
         }
 
@@ -279,14 +298,14 @@
             else cell.classList.remove('conflict');
         }
 
-        // === CORE VALIDATION LOGIC (TERBARU) ===
+        // === VALIDASI LENGKAP (Sama seperti sebelumnya) ===
         function validateMove(day, currentClass, timeSlot, mapelId, guruId) {
             const currentMapelObj = mapelData.find(m => m.id == mapelId);
             const mapelName = currentMapelObj ? currentMapelObj.nama.toLowerCase() : "";
-            const currentAngkatan = currentClass.charAt(0); // '7', '8', '9'
+            const currentAngkatan = currentClass.charAt(0); 
 
             for (let otherClass of kelasList) {
-                if (otherClass === currentClass) continue; // Skip diri sendiri
+                if (otherClass === currentClass) continue; 
 
                 const otherKey = `${day}-${otherClass}-${timeSlot}`;
                 const otherData = jadwalFix[otherKey];
@@ -296,40 +315,31 @@
                     const otherMapelName = otherMapelObj ? otherMapelObj.nama.toLowerCase() : "";
                     const otherAngkatan = otherClass.charAt(0);
 
-                    // 1. GURU CHECK (Global)
+                    // 1. GURU (Global)
                     if (guruId && otherData.guruId && guruId == otherData.guruId) {
-                        return { status: true, msg: `Guru ${guruData.find(g=>g.id==guruId)?.kode} mengajar di ${otherClass}.` };
+                        return { status: true, msg: `Guru yang sama sedang mengajar di kelas ${otherClass}.` };
                     }
 
-                    // 2. LAB CHECK (Global)
+                    // 2. LAB (Global)
                     const isRestricted = labSubjects.some(sub => mapelName.includes(sub));
                     if (isRestricted && otherMapelName === mapelName) {
                         return { status: true, msg: `Ruang Lab/Khusus dipakai ${otherClass}.` };
                     }
 
-                    // 3. PJOK SPECIAL CHECK (Baru)
-                    // Logika: PJOK tidak boleh lintas angkatan, tapi boleh sesama angkatan.
+                    // 3. PJOK (Beda Angkatan = Tabrakan)
                     const isPjok = mapelName.includes('pjok') || mapelName.includes('olahraga');
                     const isOtherPjok = otherMapelName.includes('pjok') || otherMapelName.includes('olahraga');
-
                     if (isPjok && isOtherPjok) {
-                        // Jika Angkatan BEDA (misal 7 vs 8) -> Tabrakan
                         if (currentAngkatan !== otherAngkatan) {
-                            return { status: true, msg: `Lapangan Penuh! PJOK Angkatan ${currentAngkatan} bentrok dengan Angkatan ${otherAngkatan}.` };
+                            return { status: true, msg: `Lapangan Penuh! PJOK Angkatan ${currentAngkatan} bentrok dengan ${otherAngkatan}.` };
                         }
-                        // Jika Angkatan SAMA (misal 7A vs 7B) -> Lanjut (Boleh)
-                        // Kita gunakan 'continue' agar tidak kena validasi nomor 4.
                         continue; 
                     }
 
-                    // 4. ANGKATAN CHECK (Standard)
-                    // Aturan: Sesama angkatan tidak boleh mapel sama (kecuali PJOK & Doa)
+                    // 4. ANGKATAN (Mapel Sama = Tabrakan)
                     if (currentAngkatan === otherAngkatan) {
                         if (mapelName === otherMapelName) {
-                            // Doa Pagi Boleh
                             if (mapelName.includes('doa')) continue;
-
-                            // Jika sampai sini dan itu mapel biasa -> Tabrakan
                             return { status: true, msg: `Kelas ${otherClass} (satu angkatan) sedang mapel sama.` };
                         }
                     }
