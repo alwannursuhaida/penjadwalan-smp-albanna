@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Master - EduSched Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Library SheetJS untuk Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -65,17 +67,33 @@
                             <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full" id="count-mapel">Loading...</span>
                         </div>
                         
-                        <!-- Form Mapel -->
+                        <!-- Area Import Excel Mapel -->
+                        <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <h4 class="text-xs font-bold text-blue-800 mb-2 uppercase">Import Excel</h4>
+                            <div class="flex gap-2 mb-2">
+                                <button onclick="downloadTemplateMapel()" class="flex-1 bg-white border border-blue-300 text-blue-700 text-xs py-1 px-2 rounded hover:bg-blue-50 transition">
+                                    <i class="fas fa-file-excel mr-1"></i> Download Template
+                                </button>
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <input type="file" id="file-mapel" accept=".xlsx, .xls" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200">
+                                <button onclick="uploadMapel()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 px-3 rounded shadow">
+                                    <i class="fas fa-upload"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Form Manual Mapel -->
                         <form id="form-mapel" class="mb-6 bg-gray-50 p-4 rounded-lg">
+                            <div class="text-xs font-bold text-gray-500 mb-2 uppercase border-b pb-1">Input Manual</div>
                             <div class="grid grid-cols-3 gap-4 mb-3">
                                 <div class="col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Mata Pelajaran</label>
-                                    <input type="text" id="nama-mapel" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Contoh: Matematika" required>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Mapel</label>
+                                    <input type="text" id="nama-mapel" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Contoh: Matematika" required>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Jatah Jam</label>
-                                    <input type="number" id="quota-mapel" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 text-center" placeholder="Jml" min="1" required>
-                                    <p class="text-[10px] text-gray-500 mt-1">Per Kelas/Minggu</p>
+                                    <input type="number" id="quota-mapel" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 text-center" placeholder="Jml" min="1" required>
                                 </div>
                             </div>
                             
@@ -86,13 +104,13 @@
                                     <span class="text-xs text-gray-500">Pilih warna unik.</span>
                                 </div>
                             </div>
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-                                <i class="fas fa-cloud-upload-alt mr-1"></i> Simpan ke Cloud
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm">
+                                <i class="fas fa-plus mr-1"></i> Tambah Manual
                             </button>
                         </form>
 
                         <!-- List Mapel -->
-                        <div class="overflow-y-auto max-h-96">
+                        <div class="overflow-y-auto max-h-80 border-t pt-2">
                             <ul id="list-mapel" class="space-y-2">
                                 <li class="text-center text-gray-400 py-4 text-sm">Memuat data dari cloud...</li>
                             </ul>
@@ -106,23 +124,40 @@
                             <span class="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full" id="count-guru">Loading...</span>
                         </div>
 
-                        <!-- Form Guru -->
+                        <!-- Area Import Excel Guru -->
+                        <div class="mb-4 p-3 bg-green-50 rounded-lg border border-green-100">
+                            <h4 class="text-xs font-bold text-green-800 mb-2 uppercase">Import Excel</h4>
+                            <div class="flex gap-2 mb-2">
+                                <button onclick="downloadTemplateGuru()" class="flex-1 bg-white border border-green-300 text-green-700 text-xs py-1 px-2 rounded hover:bg-green-50 transition">
+                                    <i class="fas fa-file-excel mr-1"></i> Download Template
+                                </button>
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <input type="file" id="file-guru" accept=".xlsx, .xls" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200">
+                                <button onclick="uploadGuru()" class="bg-green-600 hover:bg-green-700 text-white text-xs py-1 px-3 rounded shadow">
+                                    <i class="fas fa-upload"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Form Manual Guru -->
                         <form id="form-guru" class="mb-6 bg-gray-50 p-4 rounded-lg">
+                            <div class="text-xs font-bold text-gray-500 mb-2 uppercase border-b pb-1">Input Manual</div>
                             <div class="mb-3">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap Guru</label>
-                                <input type="text" id="nama-guru" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:outline-none" placeholder="Contoh: Budi Santoso, S.Pd" required>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                                <input type="text" id="nama-guru" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none" placeholder="Contoh: Budi Santoso, S.Pd" required>
                             </div>
                             <div class="mb-3">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Kode / Inisial (Max 3 Huruf)</label>
-                                <input type="text" id="kode-guru" maxlength="3" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:outline-none uppercase" placeholder="Contoh: BS" required>
+                                <input type="text" id="kode-guru" maxlength="3" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none uppercase" placeholder="Contoh: BS" required>
                             </div>
-                            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-                                <i class="fas fa-cloud-upload-alt mr-1"></i> Simpan ke Cloud
+                            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm">
+                                <i class="fas fa-plus mr-1"></i> Tambah Manual
                             </button>
                         </form>
 
                         <!-- List Guru -->
-                        <div class="overflow-y-auto max-h-96">
+                        <div class="overflow-y-auto max-h-80 border-t pt-2">
                             <ul id="list-guru" class="space-y-2">
                                 <li class="text-center text-gray-400 py-4 text-sm">Memuat data dari cloud...</li>
                             </ul>
@@ -138,18 +173,108 @@
     <script type="module">
         import { db, ref, push, onValue, remove } from './config.js';
 
-        // ======================= LOGIKA MATA PELAJARAN =======================
+        // --- EXCEL FUNCTIONS (Global Scope) ---
+        window.downloadTemplateMapel = () => {
+            const data = [
+                { "Nama Mapel": "Matematika", "Jatah Jam (Angka)": 4, "Warna (Hex)": "#3b82f6" },
+                { "Nama Mapel": "Bahasa Indonesia", "Jatah Jam (Angka)": 4, "Warna (Hex)": "#ef4444" },
+                { "Nama Mapel": "Contoh Lain", "Jatah Jam (Angka)": 2, "Warna (Hex)": "#10b981" }
+            ];
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template Mapel");
+            XLSX.writeFile(wb, "Template_Mapel_EduSched.xlsx");
+        };
+
+        window.uploadMapel = () => {
+            const fileInput = document.getElementById('file-mapel');
+            if(!fileInput.files.length) { alert("Pilih file excel dulu!"); return; }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                
+                let successCount = 0;
+                jsonData.forEach(row => {
+                    const nama = row["Nama Mapel"];
+                    const quota = row["Jatah Jam (Angka)"];
+                    const warna = row["Warna (Hex)"] || "#cccccc";
+
+                    if(nama && quota) {
+                        push(ref(db, 'mapel'), {
+                            nama: nama,
+                            quota: parseInt(quota),
+                            warna: warna
+                        });
+                        successCount++;
+                    }
+                });
+                alert(`Berhasil mengunggah ${successCount} mata pelajaran!`);
+                fileInput.value = ""; // Reset input
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        window.downloadTemplateGuru = () => {
+            const data = [
+                { "Nama Lengkap": "Budi Santoso, S.Pd", "Kode (Max 3 Huruf)": "BS" },
+                { "Nama Lengkap": "Siti Aminah, M.Pd", "Kode (Max 3 Huruf)": "SA" }
+            ];
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template Guru");
+            XLSX.writeFile(wb, "Template_Guru_EduSched.xlsx");
+        };
+
+        window.uploadGuru = () => {
+            const fileInput = document.getElementById('file-guru');
+            if(!fileInput.files.length) { alert("Pilih file excel dulu!"); return; }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                
+                let successCount = 0;
+                jsonData.forEach(row => {
+                    const nama = row["Nama Lengkap"];
+                    const kode = row["Kode (Max 3 Huruf)"];
+
+                    if(nama && kode) {
+                        push(ref(db, 'guru'), {
+                            nama: nama,
+                            kode: kode.substring(0,3).toUpperCase()
+                        });
+                        successCount++;
+                    }
+                });
+                alert(`Berhasil mengunggah ${successCount} data guru!`);
+                fileInput.value = "";
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        // ======================= LOGIKA MANUAL MATA PELAJARAN =======================
         const formMapel = document.getElementById('form-mapel');
         
         formMapel.addEventListener('submit', (e) => {
             e.preventDefault();
             const nama = document.getElementById('nama-mapel').value;
-            const quota = document.getElementById('quota-mapel').value; // Ambil quota
+            const quota = document.getElementById('quota-mapel').value; 
             const warna = document.getElementById('warna-mapel').value;
 
             push(ref(db, 'mapel'), {
                 nama: nama,
-                quota: parseInt(quota), // Simpan sebagai angka
+                quota: parseInt(quota),
                 warna: warna
             }).then(() => {
                 formMapel.reset();
@@ -170,16 +295,16 @@
                     count++;
                     
                     const li = document.createElement('li');
-                    li.className = 'flex justify-between items-center bg-white border border-gray-100 p-3 rounded shadow-sm hover:shadow-md transition';
+                    li.className = 'flex justify-between items-center bg-white border border-gray-100 p-2 rounded shadow-sm hover:shadow-md transition text-xs';
                     li.innerHTML = `
-                        <div class="flex items-center gap-3 w-full">
-                            <div class="w-6 h-6 rounded-full shadow-sm border border-gray-200 flex-shrink-0" style="background-color: ${item.warna};"></div>
+                        <div class="flex items-center gap-2 w-full">
+                            <div class="w-4 h-4 rounded-full shadow-sm border border-gray-200 flex-shrink-0" style="background-color: ${item.warna};"></div>
                             <div class="flex flex-col">
                                 <span class="font-medium text-gray-700">${item.nama}</span>
-                                <span class="text-[10px] text-gray-500">Jatah: <b>${item.quota || 0} JP</b> / kelas</span>
+                                <span class="text-[9px] text-gray-500">Jatah: <b>${item.quota || 0} JP</b> / kelas</span>
                             </div>
                         </div>
-                        <button id="del-mapel-${key}" class="text-red-400 hover:text-red-600 transition p-2">
+                        <button id="del-mapel-${key}" class="text-red-400 hover:text-red-600 transition px-2">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     `;
@@ -192,13 +317,13 @@
                     });
                 });
             } else {
-                listEl.innerHTML = '<li class="text-center text-gray-400 text-sm py-4">Belum ada data di Cloud.</li>';
+                listEl.innerHTML = '<li class="text-center text-gray-400 text-xs py-4">Belum ada data di Cloud.</li>';
             }
             document.getElementById('count-mapel').innerText = `${count} Mapel`;
         });
 
 
-        // ======================= LOGIKA GURU =======================
+        // ======================= LOGIKA MANUAL GURU =======================
         const formGuru = document.getElementById('form-guru');
 
         formGuru.addEventListener('submit', (e) => {
@@ -228,15 +353,15 @@
                     count++;
 
                     const li = document.createElement('li');
-                    li.className = 'flex justify-between items-center bg-white border border-gray-100 p-3 rounded shadow-sm hover:shadow-md transition';
+                    li.className = 'flex justify-between items-center bg-white border border-gray-100 p-2 rounded shadow-sm hover:shadow-md transition text-xs';
                     li.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-xs border border-green-200">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-[10px] border border-green-200">
                                 ${item.kode}
                             </div>
-                            <span class="font-medium text-gray-700 text-sm">${item.nama}</span>
+                            <span class="font-medium text-gray-700">${item.nama}</span>
                         </div>
-                        <button id="del-guru-${key}" class="text-red-400 hover:text-red-600 transition p-2">
+                        <button id="del-guru-${key}" class="text-red-400 hover:text-red-600 transition px-2">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     `;
@@ -249,7 +374,7 @@
                     });
                 });
             } else {
-                listEl.innerHTML = '<li class="text-center text-gray-400 text-sm py-4">Belum ada data di Cloud.</li>';
+                listEl.innerHTML = '<li class="text-center text-gray-400 text-xs py-4">Belum ada data di Cloud.</li>';
             }
             document.getElementById('count-guru').innerText = `${count} Guru`;
         });
