@@ -1,250 +1,346 @@
-<script type="module">
-    import { db, ref, set, remove, onValue } from './config.js';
-
-    // --- VARIABLES ---
-    const kelasList = ['7A', '7B', '7C', '7D', '7E', '7F', '8A', '8B', '8C', '8D', '8E', '8F', '9A', '9B', '9C', '9D', '9E'];
-    const labSubjects = ['informatika', 'ipa', 'seni budaya', 'bahasa bali'];
-    
-    let mapelData = [];
-    let guruData = [];
-    let settingData = { slots: [] };
-    let jadwalFix = {}; 
-    let isDataLoaded = false; // Flag untuk memastikan tabel sudah dirender
-
-    // --- GLOBAL FUNCTIONS EXPOSED TO WINDOW ---
-    window.allowDrop = (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); };
-    window.leaveDrop = (e) => { e.currentTarget.classList.remove('drag-over'); };
-    
-    window.drop = (e, hari, kelas, jam) => {
-        e.preventDefault();
-        e.currentTarget.classList.remove('drag-over');
-        const raw = e.dataTransfer.getData('text/plain');
-        if(!raw) return;
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Susun Jadwal - EduSched Cloud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
         
-        const mapel = JSON.parse(raw);
-        const cellId = `${hari}-${kelas}-${jam}`;
+        .drag-over { background-color: #e0f2fe !important; border: 2px dashed #3b82f6; }
+        .conflict { border: 2px solid red !important; background-color: #fee2e2 !important; }
 
-        const conflict = validateMove(hari, kelas, jam, mapel.id, null);
-        if(conflict.status) {
-            alert(`PERINGATAN: ${conflict.msg}`);
-            return;
+        /* SCROLLBAR CUSTOM */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* STICKY HEADERS */
+        th.sticky-top { position: sticky; top: 0; z-index: 20; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); }
+        td.sticky-left, th.sticky-left { position: sticky; left: 0; z-index: 30; background-color: #f8fafc; border-right: 2px solid #e2e8f0; }
+        th.corner-header { position: sticky; top: 0; left: 0; z-index: 40; background-color: #1e3a8a; color: white; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- TOP NAVIGATION -->
+    <header class="bg-blue-900 text-white p-3 flex justify-between items-center shadow-md flex-shrink-0">
+        <div class="flex items-center gap-4">
+            <a href="index.html" class="text-blue-200 hover:text-white text-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
+            <h1 class="text-lg font-bold border-l border-blue-700 pl-4">Penyusunan Jadwal</h1>
+        </div>
+        <div class="flex gap-2 items-center">
+            <div class="flex items-center gap-2 mr-4">
+                <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                <span class="text-xs text-blue-200">Online</span>
+            </div>
+            <label class="font-semibold text-xs text-blue-200">Lihat Hari:</label>
+            <select id="select-hari" onchange="renderJadwalView()" class="text-gray-800 rounded p-1 text-sm font-bold border-none outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="senin">Senin</option>
+                <option value="selasa">Selasa</option>
+                <option value="rabu">Rabu</option>
+                <option value="kamis">Kamis</option>
+                <option value="jumat">Jumat</option>
+            </select>
+            
+            <button onclick="resetJadwal()" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm font-bold shadow transition ml-2">
+                <i class="fas fa-trash"></i> Reset Semua
+            </button>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- SIDEBAR: DATA MAPEL -->
+        <aside class="w-56 bg-white border-r border-gray-200 flex flex-col shadow-lg z-10 flex-shrink-0">
+            <div class="p-3 border-b bg-gray-50">
+                <h3 class="font-bold text-gray-700 text-sm"><i class="fas fa-book mr-2"></i>Mapel</h3>
+                <p class="text-[10px] text-gray-500">Drag mapel ke dalam grid.</p>
+            </div>
+            <div id="source-container" class="flex-1 overflow-y-auto p-2 space-y-2">
+                <p class="text-center text-xs text-gray-400 mt-4">Memuat Mapel...</p>
+                <!-- List Mapel -->
+            </div>
+            <div class="p-2 border-t bg-yellow-50 text-[10px] text-yellow-800 leading-tight">
+                <b>Aturan Validasi:</b><br>
+                1. Guru (Global Collision)<br>
+                2. Lab (Info, IPA, dll)<br>
+                3. PJOK (Beda Angkatan = Merah)<br>
+                4. Angkatan (Mapel Sama = Merah)
+            </div>
+        </aside>
+
+        <!-- MAIN TABLE AREA -->
+        <main class="flex-1 overflow-auto bg-gray-200 p-2 relative">
+            <div class="bg-white rounded shadow border border-gray-300 inline-block">
+                <table class="border-collapse text-sm whitespace-nowrap">
+                    <thead>
+                        <tr id="header-row">
+                            <!-- Header Kelas -->
+                        </tr>
+                    </thead>
+                    <tbody id="jadwal-body">
+                        <!-- Baris Jam -->
+                        <tr><td class="p-4 text-center text-gray-500">Memuat Jadwal...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script type="module">
+        import { db, ref, set, remove, onValue } from './config.js';
+
+        // --- VARIABLES ---
+        const kelasList = ['7A', '7B', '7C', '7D', '7E', '7F', '8A', '8B', '8C', '8D', '8E', '8F', '9A', '9B', '9C', '9D', '9E'];
+        const labSubjects = ['informatika', 'ipa', 'seni budaya', 'bahasa bali'];
+        
+        let mapelData = [];
+        let guruData = [];
+        let settingData = { slots: [] };
+        let jadwalFix = {}; 
+        let isDataLoaded = false; // Flag penting untuk mencegah error null
+
+        // --- GLOBAL FUNCTIONS EXPOSED TO WINDOW ---
+        window.allowDrop = (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); };
+        window.leaveDrop = (e) => { e.currentTarget.classList.remove('drag-over'); };
+        
+        window.drop = (e, hari, kelas, jam) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            const raw = e.dataTransfer.getData('text/plain');
+            if(!raw) return;
+            
+            const mapel = JSON.parse(raw);
+            const cellId = `${hari}-${kelas}-${jam}`;
+
+            // Validasi sebelum simpan
+            const conflict = validateMove(hari, kelas, jam, mapel.id, null);
+            if(conflict.status) {
+                alert(`PERINGATAN: ${conflict.msg}`);
+                return; 
+            }
+
+            set(ref(db, `jadwal/${cellId}`), {
+                mapelId: mapel.id,
+                guruId: null
+            });
+        };
+
+        window.hapusJadwal = (cellId) => {
+            if(confirm('Hapus jadwal ini?')) remove(ref(db, `jadwal/${cellId}`));
+        };
+
+        window.onGuruChange = (selectEl, cellId) => {
+            const guruId = selectEl.value;
+            const [hari, kelas, jam] = cellId.split('-');
+            const currentData = jadwalFix[cellId];
+            
+            if(!currentData) return;
+
+            const conflict = validateMove(hari, kelas, jam, currentData.mapelId, guruId);
+            if(conflict.status) {
+                alert(conflict.msg);
+                // selectEl.value = ""; // Opsional: reset jika ingin strict
+                return;
+            }
+
+            set(ref(db, `jadwal/${cellId}`), {
+                mapelId: currentData.mapelId,
+                guruId: guruId
+            });
+        };
+
+        window.renderJadwalView = renderJadwalView;
+        window.resetJadwal = () => {
+            if(confirm('Hapus SEMUA jadwal di Cloud? TINDAKAN INI TIDAK BISA DIBATALKAN.')) remove(ref(db, 'jadwal'));
         }
 
-        set(ref(db, `jadwal/${cellId}`), {
-            mapelId: mapel.id,
-            guruId: null
+        // --- LOAD DATA (REALTIME) ---
+        onValue(ref(db, 'mapel'), (snapshot) => {
+            const data = snapshot.val();
+            mapelData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+            renderSourceMapel();
+            if(isDataLoaded) hydrateCells(); 
         });
-    };
 
-    window.hapusJadwal = (cellId) => {
-        if(confirm('Hapus jadwal ini?')) remove(ref(db, `jadwal/${cellId}`));
-    };
-
-    window.onGuruChange = (selectEl, cellId) => {
-        const guruId = selectEl.value;
-        const [hari, kelas, jam] = cellId.split('-');
-        const currentData = jadwalFix[cellId];
-        
-        if(!currentData) return;
-
-        const conflict = validateMove(hari, kelas, jam, currentData.mapelId, guruId);
-        if(conflict.status) {
-            alert(conflict.msg);
-            // Kembalikan pilihan ke sebelumnya atau kosongkan jika perlu
-            // selectEl.value = ""; 
-            return; 
-        }
-
-        set(ref(db, `jadwal/${cellId}`), {
-            mapelId: currentData.mapelId,
-            guruId: guruId
+        onValue(ref(db, 'guru'), (snapshot) => {
+            const data = snapshot.val();
+            guruData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
+            if(isDataLoaded) hydrateCells();
         });
-    };
 
-    window.renderJadwalView = renderJadwalView;
-    window.resetJadwal = () => {
-        if(confirm('Hapus SEMUA jadwal di Cloud?')) remove(ref(db, 'jadwal'));
-    }
-
-    // --- LOAD DATA (REALTIME) ---
-    onValue(ref(db, 'mapel'), (snapshot) => {
-        const data = snapshot.val();
-        mapelData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
-        renderSourceMapel();
-        if(isDataLoaded) hydrateCells(); 
-    });
-
-    onValue(ref(db, 'guru'), (snapshot) => {
-        const data = snapshot.val();
-        guruData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
-        if(isDataLoaded) hydrateCells();
-    });
-
-    onValue(ref(db, 'pengaturan'), (snapshot) => {
-        const data = snapshot.val();
-        settingData = data || { slots: [] };
-        // Saat pengaturan waktu masuk, kita render ulang tabelnya
-        renderJadwalView(); 
-    });
-
-    onValue(ref(db, 'jadwal'), (snapshot) => {
-        jadwalFix = snapshot.val() || {};
-        // Jadwal masuk, isi tabel (hanya jika tabel sudah ada)
-        if(isDataLoaded) hydrateCells(); 
-    });
-
-    // --- RENDERING FUNCTIONS ---
-    function renderSourceMapel() {
-        const container = document.getElementById('source-container');
-        if(!container) return; // Safety check
-        container.innerHTML = '';
-        mapelData.forEach(m => {
-            const div = document.createElement('div');
-            div.className = "p-2 rounded shadow-sm border cursor-move text-white font-medium text-xs flex justify-between items-center hover:scale-105 transition transform";
-            div.style.backgroundColor = m.warna;
-            div.innerText = m.nama;
-            div.setAttribute('draggable', 'true');
-            div.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', JSON.stringify(m)); });
-            container.appendChild(div);
+        onValue(ref(db, 'pengaturan'), (snapshot) => {
+            const data = snapshot.val();
+            settingData = data || { slots: [] };
+            renderJadwalView(); // Render ulang struktur tabel jika pengaturan berubah
         });
-    }
 
-    function renderJadwalView() {
-        // Safety Check: Pastikan elemen ada
-        const selectHari = document.getElementById('select-hari');
-        const headerRow = document.getElementById('header-row');
-        const tbody = document.getElementById('jadwal-body');
-        
-        if(!selectHari || !headerRow || !tbody) return; 
-
-        const hari = selectHari.value;
-        
-        // Render Header
-        let headerHTML = `<th class="p-3 border w-24 sticky-left corner-header text-center">WAKTU / KELAS</th>`;
-        kelasList.forEach(kelas => {
-            const angkatan = kelas[0];
-            let bg = angkatan === '7' ? '#dbeafe' : (angkatan === '8' ? '#dcfce7' : '#f3e8ff');
-            headerHTML += `<th class="p-2 border text-center min-w-[140px] sticky-top" style="background-color: ${bg}; color: #1f2937;"><span class="text-lg font-bold">${kelas}</span></th>`;
+        onValue(ref(db, 'jadwal'), (snapshot) => {
+            jadwalFix = snapshot.val() || {};
+            if(isDataLoaded) hydrateCells(); 
         });
-        headerRow.innerHTML = headerHTML;
 
-        // Render Rows
-        tbody.innerHTML = '';
-        if(settingData.slots) {
-            settingData.slots.forEach(slot => {
-                const tr = document.createElement('tr');
-                const isIstirahat = slot.type === 'istirahat';
-                const infoWaktu = `<td class="border p-2 text-center sticky-left font-bold text-gray-700 shadow-sm"><div class="text-xs text-gray-500 mb-1">${slot.start} - ${slot.end}</div><div class="bg-gray-200 rounded px-2 py-1 inline-block text-xs">JP ${slot.no}</div></td>`;
-
-                if (isIstirahat) {
-                    tr.innerHTML = infoWaktu + `<td colspan="${kelasList.length}" class="bg-orange-100 text-center font-bold text-orange-600 tracking-widest border border-orange-200">I S T I R A H A T</td>`;
-                } else {
-                    tr.innerHTML = infoWaktu;
-                    kelasList.forEach(kelas => {
-                        const cellId = `${hari}-${kelas}-${slot.no}`;
-                        tr.innerHTML += `<td id="${cellId}" class="border p-1 relative h-28 align-top transition hover:bg-gray-50 bg-white" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)" ondrop="drop(event, '${hari}', '${kelas}', '${slot.no}')"></td>`;
-                    });
-                }
-                tbody.appendChild(tr);
+        // --- RENDERING FUNCTIONS ---
+        function renderSourceMapel() {
+            const container = document.getElementById('source-container');
+            if(!container) return;
+            container.innerHTML = '';
+            mapelData.forEach(m => {
+                const div = document.createElement('div');
+                div.className = "p-2 rounded shadow-sm border cursor-move text-white font-medium text-xs flex justify-between items-center hover:scale-105 transition transform";
+                div.style.backgroundColor = m.warna;
+                div.innerText = m.nama;
+                div.setAttribute('draggable', 'true');
+                div.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', JSON.stringify(m)); });
+                container.appendChild(div);
             });
         }
-        
-        isDataLoaded = true; // Tandai tabel sudah siap
-        hydrateCells();
-    }
 
-    function hydrateCells() {
-        // Safety Check Paling Penting (Fix Error Anda)
-        const selectHari = document.getElementById('select-hari');
-        if(!selectHari) return; // Jika elemen belum ada, stop.
-
-        const hari = selectHari.value;
-
-        // Bersihkan dulu semua cell pelajaran
-        document.querySelectorAll('td[id]').forEach(td => { td.innerHTML = ''; td.classList.remove('conflict'); });
-
-        // Isi data
-        Object.keys(jadwalFix).forEach(cellId => {
-            if(cellId.startsWith(hari)) {
-                const data = jadwalFix[cellId];
-                // Cek apakah elemen TD nya ada (karena mungkin pengaturan waktu berubah)
-                if(document.getElementById(cellId)) {
-                    renderCellContent(cellId, data.mapelId, data.guruId);
-                    
-                    const [h, k, j] = cellId.split('-');
-                    const res = validateMove(h, k, j, data.mapelId, data.guruId);
-                    if(res.status) document.getElementById(cellId).classList.add('conflict');
-                }
-            }
-        });
-    }
-
-    function renderCellContent(cellId, mapelId, currentGuruId) {
-        const cell = document.getElementById(cellId);
-        if(!cell) return; // Safety
-
-        const mapel = mapelData.find(m => m.id === mapelId);
-        if(!mapel) return;
-
-        const currentGuruObj = guruData.find(g => g.id === currentGuruId);
-        const inisialGuru = currentGuruObj ? currentGuruObj.kode : '?';
-
-        let options = `<option value="">-- Pilih Guru --</option>`;
-        guruData.forEach(g => {
-            const sel = (g.id === currentGuruId) ? 'selected' : '';
-            options += `<option value="${g.id}" ${sel}>${g.nama}</option>`;
-        });
-
-        cell.innerHTML = `
-            <div class="h-full w-full rounded p-1 shadow-sm flex flex-col justify-between" style="background-color: ${mapel.warna}20; border-top: 3px solid ${mapel.warna};">
-                <div class="flex justify-between items-start mb-1">
-                    <span class="font-bold text-gray-800 text-[10px] leading-tight line-clamp-2" title="${mapel.nama}">${mapel.nama}</span>
-                    <button onclick="hapusJadwal('${cellId}')" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="flex-1 flex items-center justify-center">
-                    <div class="text-xl font-bold text-gray-600 tracking-wider bg-white bg-opacity-50 px-2 rounded">${currentGuruId ? inisialGuru : '...'}</div>
-                </div>
-                <select onchange="onGuruChange(this, '${cellId}')" class="w-full border border-gray-300 rounded p-0.5 bg-white text-[10px] mt-1 cursor-pointer">${options}</select>
-            </div>
-        `;
-    }
-
-    // === VALIDASI (SAMA) ===
-    function validateMove(day, currentClass, timeSlot, mapelId, guruId) {
-        const currentMapelObj = mapelData.find(m => m.id === mapelId);
-        const mapelName = currentMapelObj ? currentMapelObj.nama.toLowerCase() : "";
-        const currentAngkatan = currentClass.charAt(0);
-
-        for (let otherClass of kelasList) {
-            if (otherClass === currentClass) continue;
+        function renderJadwalView() {
+            const selectHari = document.getElementById('select-hari');
+            const headerRow = document.getElementById('header-row');
+            const tbody = document.getElementById('jadwal-body');
             
-            const otherKey = `${day}-${otherClass}-${timeSlot}`;
-            const otherData = jadwalFix[otherKey];
+            if(!selectHari || !headerRow || !tbody) return; 
 
-            if (otherData) {
-                const otherMapelObj = mapelData.find(m => m.id === otherData.mapelId);
-                const otherMapelName = otherMapelObj ? otherMapelObj.nama.toLowerCase() : "";
-                const otherAngkatan = otherClass.charAt(0);
+            const hari = selectHari.value;
+            
+            // Render Header
+            let headerHTML = `<th class="p-3 border w-24 sticky-left corner-header text-center">WAKTU / KELAS</th>`;
+            kelasList.forEach(kelas => {
+                const angkatan = kelas[0];
+                let bg = angkatan === '7' ? '#dbeafe' : (angkatan === '8' ? '#dcfce7' : '#f3e8ff');
+                headerHTML += `<th class="p-2 border text-center min-w-[140px] sticky-top" style="background-color: ${bg}; color: #1f2937;"><span class="text-lg font-bold">${kelas}</span></th>`;
+            });
+            headerRow.innerHTML = headerHTML;
 
-                if (guruId && otherData.guruId && guruId === otherData.guruId) 
-                    return { status: true, msg: `Guru mengajar di ${otherClass}.` };
+            // Render Rows
+            tbody.innerHTML = '';
+            if(settingData.slots) {
+                settingData.slots.forEach(slot => {
+                    const tr = document.createElement('tr');
+                    const isIstirahat = slot.type === 'istirahat';
+                    const infoWaktu = `<td class="border p-2 text-center sticky-left font-bold text-gray-700 shadow-sm"><div class="text-xs text-gray-500 mb-1">${slot.start} - ${slot.end}</div><div class="bg-gray-200 rounded px-2 py-1 inline-block text-xs">JP ${slot.no}</div></td>`;
 
-                const isRestricted = labSubjects.some(sub => mapelName.includes(sub));
-                if (isRestricted && otherMapelName === mapelName) 
-                    return { status: true, msg: `Lab dipakai ${otherClass}.` };
+                    if (isIstirahat) {
+                        tr.innerHTML = infoWaktu + `<td colspan="${kelasList.length}" class="bg-orange-100 text-center font-bold text-orange-600 tracking-widest border border-orange-200">I S T I R A H A T</td>`;
+                    } else {
+                        tr.innerHTML = infoWaktu;
+                        kelasList.forEach(kelas => {
+                            const cellId = `${hari}-${kelas}-${slot.no}`;
+                            tr.innerHTML += `<td id="${cellId}" class="border p-1 relative h-28 align-top transition hover:bg-gray-50 bg-white" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)" ondrop="drop(event, '${hari}', '${kelas}', '${slot.no}')"></td>`;
+                        });
+                    }
+                    tbody.appendChild(tr);
+                });
+            }
+            
+            isDataLoaded = true;
+            hydrateCells();
+        }
 
-                const isPjok = mapelName.includes('pjok') || mapelName.includes('olahraga');
-                const isOtherPjok = otherMapelName.includes('pjok') || otherMapelName.includes('olahraga');
-                if (isPjok && isOtherPjok) {
-                    if (currentAngkatan !== otherAngkatan) return { status: true, msg: `PJOK bentrok angkatan.` };
-                    continue;
+        function hydrateCells() {
+            const selectHari = document.getElementById('select-hari');
+            if(!selectHari) return; 
+
+            const hari = selectHari.value;
+
+            // Bersihkan dulu semua cell pelajaran
+            document.querySelectorAll('td[id]').forEach(td => { td.innerHTML = ''; td.classList.remove('conflict'); });
+
+            // Isi data
+            Object.keys(jadwalFix).forEach(cellId => {
+                if(cellId.startsWith(hari)) {
+                    const data = jadwalFix[cellId];
+                    if(document.getElementById(cellId)) {
+                        renderCellContent(cellId, data.mapelId, data.guruId);
+                        
+                        const [h, k, j] = cellId.split('-');
+                        const res = validateMove(h, k, j, data.mapelId, data.guruId);
+                        if(res.status) document.getElementById(cellId).classList.add('conflict');
+                    }
                 }
+            });
+        }
 
-                if (currentAngkatan === otherAngkatan && mapelName === otherMapelName) {
-                    if (!mapelName.includes('doa')) return { status: true, msg: `Mapel sama di ${otherClass}.` };
+        function renderCellContent(cellId, mapelId, currentGuruId) {
+            const cell = document.getElementById(cellId);
+            if(!cell) return;
+
+            const mapel = mapelData.find(m => m.id === mapelId);
+            if(!mapel) return;
+
+            const currentGuruObj = guruData.find(g => g.id === currentGuruId);
+            const inisialGuru = currentGuruObj ? currentGuruObj.kode : '?';
+
+            let options = `<option value="">-- Pilih Guru --</option>`;
+            guruData.forEach(g => {
+                const sel = (g.id === currentGuruId) ? 'selected' : '';
+                options += `<option value="${g.id}" ${sel}>${g.nama}</option>`;
+            });
+
+            cell.innerHTML = `
+                <div class="h-full w-full rounded p-1 shadow-sm flex flex-col justify-between" style="background-color: ${mapel.warna}20; border-top: 3px solid ${mapel.warna};">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="font-bold text-gray-800 text-[10px] leading-tight line-clamp-2" title="${mapel.nama}">${mapel.nama}</span>
+                        <button onclick="hapusJadwal('${cellId}')" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center">
+                        <div class="text-xl font-bold text-gray-600 tracking-wider bg-white bg-opacity-50 px-2 rounded">${currentGuruId ? inisialGuru : '...'}</div>
+                    </div>
+                    <select onchange="onGuruChange(this, '${cellId}')" class="w-full border border-gray-300 rounded p-0.5 bg-white text-[10px] mt-1 cursor-pointer">${options}</select>
+                </div>
+            `;
+        }
+
+        // === VALIDASI LENGKAP ===
+        function validateMove(day, currentClass, timeSlot, mapelId, guruId) {
+            const currentMapelObj = mapelData.find(m => m.id === mapelId);
+            const mapelName = currentMapelObj ? currentMapelObj.nama.toLowerCase() : "";
+            const currentAngkatan = currentClass.charAt(0);
+
+            for (let otherClass of kelasList) {
+                if (otherClass === currentClass) continue;
+                
+                const otherKey = `${day}-${otherClass}-${timeSlot}`;
+                const otherData = jadwalFix[otherKey];
+
+                if (otherData) {
+                    const otherMapelObj = mapelData.find(m => m.id === otherData.mapelId);
+                    const otherMapelName = otherMapelObj ? otherMapelObj.nama.toLowerCase() : "";
+                    const otherAngkatan = otherClass.charAt(0);
+
+                    // 1. GURU (Global Collision)
+                    if (guruId && otherData.guruId && guruId === otherData.guruId) 
+                        return { status: true, msg: `Guru mengajar di ${otherClass}.` };
+
+                    // 2. LAB (Global Collision)
+                    const isRestricted = labSubjects.some(sub => mapelName.includes(sub));
+                    if (isRestricted && otherMapelName === mapelName) 
+                        return { status: true, msg: `Lab dipakai ${otherClass}.` };
+
+                    // 3. PJOK (Lintas Angkatan Dilarang)
+                    const isPjok = mapelName.includes('pjok') || mapelName.includes('olahraga');
+                    const isOtherPjok = otherMapelName.includes('pjok') || otherMapelName.includes('olahraga');
+                    if (isPjok && isOtherPjok) {
+                        if (currentAngkatan !== otherAngkatan) return { status: true, msg: `PJOK bentrok angkatan.` };
+                        continue; // Jika sesama angkatan, skip validasi nomor 4
+                    }
+
+                    // 4. ANGKATAN (Mapel Sama Dilarang, Kecuali Doa)
+                    if (currentAngkatan === otherAngkatan && mapelName === otherMapelName) {
+                        if (!mapelName.includes('doa')) return { status: true, msg: `Mapel sama di ${otherClass}.` };
+                    }
                 }
             }
+            return { status: false, msg: "Aman" };
         }
-        return { status: false, msg: "Aman" };
-    }
-</script>
+    </script>
+</body>
+</html>
