@@ -20,27 +20,9 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         /* STICKY HEADERS */
-        th.sticky-top {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
-        }
-        td.sticky-left, th.sticky-left {
-            position: sticky;
-            left: 0;
-            z-index: 30;
-            background-color: #f8fafc;
-            border-right: 2px solid #e2e8f0;
-        }
-        th.corner-header {
-            position: sticky;
-            top: 0;
-            left: 0;
-            z-index: 40;
-            background-color: #1e3a8a;
-            color: white;
-        }
+        th.sticky-top { position: sticky; top: 0; z-index: 20; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); }
+        td.sticky-left, th.sticky-left { position: sticky; left: 0; z-index: 30; background-color: #f8fafc; border-right: 2px solid #e2e8f0; }
+        th.corner-header { position: sticky; top: 0; left: 0; z-index: 40; background-color: #1e3a8a; color: white; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -81,8 +63,9 @@
             <div class="p-2 border-t bg-yellow-50 text-[10px] text-yellow-800 leading-tight">
                 <b>Aturan Tabrakan:</b><br>
                 1. Guru (Global)<br>
-                2. Angkatan (Kecuali PJOK & Doa)<br>
-                3. Lab (Info, IPA, dll)
+                2. Lab/Ruang Khusus (Global)<br>
+                3. PJOK (Beda Angkatan = Dilarang)<br>
+                4. Mapel Lain (Sama Angkatan = Dilarang)
             </div>
         </aside>
 
@@ -101,14 +84,14 @@
     </div>
 
     <script>
-        // === KONFIGURASI KELAS ===
+        // === KONFIGURASI ===
         const kelasList = [
             '7A', '7B', '7C', '7D', '7E', '7F',
             '8A', '8B', '8C', '8D', '8E', '8F',
             '9A', '9B', '9C', '9D', '9E'
         ];
         
-        // Mapel Khusus (Lab/Ruang Khusus) - Tidak boleh bareng se-sekolah
+        // Mapel Khusus (Lab/Ruang Khusus)
         const labSubjects = ['informatika', 'ipa', 'seni budaya', 'bahasa bali'];
         
         let mapelData = [];
@@ -134,17 +117,15 @@
             }
         }
 
-        // --- RENDER SIDEBAR MAPEL ---
+        // --- RENDER SIDEBAR ---
         function renderSourceMapel() {
             const container = document.getElementById('source-container');
             container.innerHTML = '';
-            
             mapelData.forEach(m => {
                 const div = document.createElement('div');
                 div.className = "p-2 rounded shadow-sm border cursor-move text-white font-medium text-xs flex justify-between items-center hover:scale-105 transition transform";
                 div.style.backgroundColor = m.warna;
                 div.innerText = m.nama;
-                
                 div.setAttribute('draggable', 'true');
                 div.addEventListener('dragstart', (e) => {
                     e.dataTransfer.setData('text/plain', JSON.stringify(m));
@@ -153,68 +134,48 @@
             });
         }
 
-        // --- RENDER UTAMA (TRANSPOSE LAYOUT) ---
+        // --- RENDER MAIN TABLE ---
         function renderJadwalView() {
             const hari = document.getElementById('select-hari').value;
             const headerRow = document.getElementById('header-row');
             const tbody = document.getElementById('jadwal-body');
 
-            // 1. RENDER HEADER (KELAS MENYAMPING)
+            // Header
             let headerHTML = `<th class="p-3 border w-24 sticky-left corner-header text-center">WAKTU / KELAS</th>`;
-            
             kelasList.forEach(kelas => {
                 const angkatan = kelas.substring(0, 1);
-                let bgClass = '#dbeafe'; // Biru (7)
-                if(angkatan === '8') bgClass = '#dcfce7'; // Hijau (8)
-                if(angkatan === '9') bgClass = '#f3e8ff'; // Ungu (9)
-                
-                headerHTML += `
-                    <th class="p-2 border text-center min-w-[140px] sticky-top" style="background-color: ${bgClass}; color: #1f2937;">
-                        <span class="text-lg font-bold">${kelas}</span>
-                    </th>
-                `;
+                let bgClass = '#dbeafe'; 
+                if(angkatan === '8') bgClass = '#dcfce7'; 
+                if(angkatan === '9') bgClass = '#f3e8ff'; 
+                headerHTML += `<th class="p-2 border text-center min-w-[140px] sticky-top" style="background-color: ${bgClass}; color: #1f2937;"><span class="text-lg font-bold">${kelas}</span></th>`;
             });
             headerRow.innerHTML = headerHTML;
 
-            // 2. RENDER BARIS (JAM KE BAWAH)
+            // Rows
             tbody.innerHTML = '';
             settingData.slots.forEach(slot => {
                 const tr = document.createElement('tr');
                 const isIstirahat = slot.type === 'istirahat';
-                
                 const infoWaktu = `
                     <td class="border p-2 text-center sticky-left font-bold text-gray-700 shadow-sm" style="min-width: 100px;">
                         <div class="text-xs text-gray-500 mb-1">${slot.start} - ${slot.end}</div>
                         <div class="bg-gray-200 rounded px-2 py-1 inline-block text-xs">JP ${slot.no}</div>
-                    </td>
-                `;
+                    </td>`;
 
                 if (isIstirahat) {
-                    tr.innerHTML = infoWaktu + `
-                        <td colspan="${kelasList.length}" class="bg-orange-100 text-center font-bold text-orange-600 tracking-widest border border-orange-200">
-                            I S T I R A H A T
-                        </td>
-                    `;
+                    tr.innerHTML = infoWaktu + `<td colspan="${kelasList.length}" class="bg-orange-100 text-center font-bold text-orange-600 tracking-widest border border-orange-200">I S T I R A H A T</td>`;
                 } else {
                     tr.innerHTML = infoWaktu;
                     kelasList.forEach(kelas => {
                         const cellId = `${hari}-${kelas}-${slot.no}`;
-                        tr.innerHTML += `
-                            <td id="${cellId}" class="border p-1 relative h-24 align-top transition hover:bg-gray-50 bg-white"
-                                ondragover="allowDrop(event)" 
-                                ondragleave="leaveDrop(event)" 
-                                ondrop="drop(event, '${hari}', '${kelas}', '${slot.no}')">
-                            </td>
-                        `;
+                        tr.innerHTML += `<td id="${cellId}" class="border p-1 relative h-24 align-top transition hover:bg-gray-50 bg-white" ondragover="allowDrop(event)" ondragleave="leaveDrop(event)" ondrop="drop(event, '${hari}', '${kelas}', '${slot.no}')"></td>`;
                     });
                 }
                 tbody.appendChild(tr);
             });
-
             hydrateCells(hari);
         }
 
-        // --- HYDRATE / ISI DATA ---
         function hydrateCells(hari) {
             kelasList.forEach(kelas => {
                 settingData.slots.forEach(slot => {
@@ -230,7 +191,7 @@
             });
         }
 
-        // --- DRAG & DROP & VALIDATION ---
+        // --- DRAG & DROP UTILS ---
         function allowDrop(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
         function leaveDrop(e) { e.currentTarget.classList.remove('drag-over'); }
 
@@ -268,8 +229,7 @@
             });
 
             cell.innerHTML = `
-                <div class="h-full w-full rounded p-1 text-[10px] shadow-sm flex flex-col gap-1" 
-                     style="background-color: ${mapel.warna}20; border-top: 3px solid ${mapel.warna};">
+                <div class="h-full w-full rounded p-1 text-[10px] shadow-sm flex flex-col gap-1" style="background-color: ${mapel.warna}20; border-top: 3px solid ${mapel.warna};">
                     <div class="flex justify-between items-start">
                         <span class="font-bold text-gray-800 leading-tight line-clamp-2" title="${mapel.nama}">${mapel.nama}</span>
                         <button onclick="hapusJadwal('${cellId}')" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
@@ -298,7 +258,6 @@
             const guruId = selectEl.value;
             const data = jadwalFix[cellId];
             data.guruId = guruId;
-            
             const [hari, kelas, jam] = cellId.split('-');
             const result = validateMove(hari, kelas, jam, data.mapelId, guruId);
             const cell = document.getElementById(cellId);
@@ -320,14 +279,14 @@
             else cell.classList.remove('conflict');
         }
 
-        // --- CORE VALIDATION LOGIC ---
+        // === CORE VALIDATION LOGIC (TERBARU) ===
         function validateMove(day, currentClass, timeSlot, mapelId, guruId) {
             const currentMapelObj = mapelData.find(m => m.id == mapelId);
             const mapelName = currentMapelObj ? currentMapelObj.nama.toLowerCase() : "";
-            const currentAngkatan = currentClass.charAt(0); 
+            const currentAngkatan = currentClass.charAt(0); // '7', '8', '9'
 
             for (let otherClass of kelasList) {
-                if (otherClass === currentClass) continue; 
+                if (otherClass === currentClass) continue; // Skip diri sendiri
 
                 const otherKey = `${day}-${otherClass}-${timeSlot}`;
                 const otherData = jadwalFix[otherKey];
@@ -335,28 +294,43 @@
                 if (otherData) {
                     const otherMapelObj = mapelData.find(m => m.id == otherData.mapelId);
                     const otherMapelName = otherMapelObj ? otherMapelObj.nama.toLowerCase() : "";
+                    const otherAngkatan = otherClass.charAt(0);
 
-                    // 1. GURU TIDAK BOLEH TABRAKAN
+                    // 1. GURU CHECK (Global)
                     if (guruId && otherData.guruId && guruId == otherData.guruId) {
-                        return { status: true, msg: `Guru yang sama sedang mengajar di kelas ${otherClass}.` };
+                        return { status: true, msg: `Guru ${guruData.find(g=>g.id==guruId)?.kode} mengajar di ${otherClass}.` };
                     }
 
-                    // 2. LAB TIDAK BOLEH TABRAKAN (Global)
+                    // 2. LAB CHECK (Global)
                     const isRestricted = labSubjects.some(sub => mapelName.includes(sub));
                     if (isRestricted && otherMapelName === mapelName) {
-                        return { status: true, msg: `Ruang Lab/Khusus untuk mapel ini sedang dipakai oleh kelas ${otherClass}.` };
+                        return { status: true, msg: `Ruang Lab/Khusus dipakai ${otherClass}.` };
                     }
 
-                    // 3. ANGKATAN TIDAK BOLEH MAPEL SAMA (Kecuali PJOK & Doa Pagi)
-                    if (otherClass.startsWith(currentAngkatan)) {
-                        if (mapelName === otherMapelName) {
-                            // Cek Pengecualian
-                            const exceptions = ['pjok', 'olahraga', 'doa', 'doa pagi'];
-                            const isException = exceptions.some(exc => mapelName.includes(exc));
+                    // 3. PJOK SPECIAL CHECK (Baru)
+                    // Logika: PJOK tidak boleh lintas angkatan, tapi boleh sesama angkatan.
+                    const isPjok = mapelName.includes('pjok') || mapelName.includes('olahraga');
+                    const isOtherPjok = otherMapelName.includes('pjok') || otherMapelName.includes('olahraga');
 
-                            if (!isException) {
-                                return { status: true, msg: `Kelas ${otherClass} (satu angkatan) sedang mempelajari mapel yang sama. Ganti mapel lain.` };
-                            }
+                    if (isPjok && isOtherPjok) {
+                        // Jika Angkatan BEDA (misal 7 vs 8) -> Tabrakan
+                        if (currentAngkatan !== otherAngkatan) {
+                            return { status: true, msg: `Lapangan Penuh! PJOK Angkatan ${currentAngkatan} bentrok dengan Angkatan ${otherAngkatan}.` };
+                        }
+                        // Jika Angkatan SAMA (misal 7A vs 7B) -> Lanjut (Boleh)
+                        // Kita gunakan 'continue' agar tidak kena validasi nomor 4.
+                        continue; 
+                    }
+
+                    // 4. ANGKATAN CHECK (Standard)
+                    // Aturan: Sesama angkatan tidak boleh mapel sama (kecuali PJOK & Doa)
+                    if (currentAngkatan === otherAngkatan) {
+                        if (mapelName === otherMapelName) {
+                            // Doa Pagi Boleh
+                            if (mapelName.includes('doa')) continue;
+
+                            // Jika sampai sini dan itu mapel biasa -> Tabrakan
+                            return { status: true, msg: `Kelas ${otherClass} (satu angkatan) sedang mapel sama.` };
                         }
                     }
                 }
