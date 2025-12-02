@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Master - EduSched</title>
+    <title>Data Master - EduSched Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -18,7 +18,7 @@
         <aside class="w-64 bg-blue-900 text-white flex-shrink-0 hidden md:flex flex-col">
             <div class="p-6 text-center border-b border-blue-800">
                 <h1 class="text-2xl font-bold"><i class="fas fa-calendar-alt mr-2"></i>EduSched</h1>
-                <p class="text-xs text-blue-300 mt-1">Sistem Penjadwalan Pelajaran</p>
+                <p class="text-xs text-blue-300 mt-1">Sistem Penjadwalan Cloud</p>
             </div>
             <nav class="flex-1 p-4 space-y-2">
                 <a href="index.html" class="flex items-center p-3 text-blue-100 hover:bg-blue-800 rounded-lg transition">
@@ -45,7 +45,11 @@
 
         <div class="flex-1 flex flex-col overflow-y-auto">
             <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
-                <h2 class="text-xl font-bold text-gray-700">Data Master</h2>
+                <h2 class="text-xl font-bold text-gray-700">Data Master (Cloud)</h2>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                    <span class="text-xs text-green-600 font-semibold">Online</span>
+                </div>
             </header>
 
             <main class="p-6">
@@ -54,7 +58,7 @@
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <div class="flex items-center justify-between mb-4 border-b pb-2">
                             <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-book text-blue-500 mr-2"></i>Mata Pelajaran</h3>
-                            <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full" id="count-mapel">0 Mapel</span>
+                            <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full" id="count-mapel">Loading...</span>
                         </div>
                         
                         <form id="form-mapel" class="mb-6 bg-gray-50 p-4 rounded-lg">
@@ -63,46 +67,48 @@
                                 <input type="text" id="nama-mapel" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Contoh: Matematika" required>
                             </div>
                             <div class="mb-3">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Warna Label (Untuk Jadwal)</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Warna Label</label>
                                 <div class="flex gap-2 items-center">
                                     <input type="color" id="warna-mapel" class="h-10 w-14 border border-gray-300 rounded cursor-pointer" value="#3b82f6">
-                                    <span class="text-xs text-gray-500">Pilih warna untuk membedakan mapel di jadwal.</span>
+                                    <span class="text-xs text-gray-500">Pilih warna unik.</span>
                                 </div>
                             </div>
                             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-                                <i class="fas fa-plus mr-1"></i> Tambah Mapel
+                                <i class="fas fa-cloud-upload-alt mr-1"></i> Simpan ke Cloud
                             </button>
                         </form>
 
                         <div class="overflow-y-auto max-h-96">
                             <ul id="list-mapel" class="space-y-2">
-                                </ul>
+                                <li class="text-center text-gray-400 py-4 text-sm">Memuat data dari cloud...</li>
+                            </ul>
                         </div>
                     </div>
 
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <div class="flex items-center justify-between mb-4 border-b pb-2">
                             <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-chalkboard-teacher text-green-500 mr-2"></i>Data Guru</h3>
-                            <span class="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full" id="count-guru">0 Guru</span>
+                            <span class="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full" id="count-guru">Loading...</span>
                         </div>
 
                         <form id="form-guru" class="mb-6 bg-gray-50 p-4 rounded-lg">
                             <div class="mb-3">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Guru</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap Guru</label>
                                 <input type="text" id="nama-guru" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:outline-none" placeholder="Contoh: Budi Santoso, S.Pd" required>
                             </div>
                             <div class="mb-3">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Kode Guru / Inisial</label>
-                                <input type="text" id="kode-guru" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:outline-none" placeholder="Contoh: BS" required>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Kode / Inisial (Max 3 Huruf)</label>
+                                <input type="text" id="kode-guru" maxlength="3" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:outline-none uppercase" placeholder="Contoh: BS" required>
                             </div>
                             <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition">
-                                <i class="fas fa-plus mr-1"></i> Tambah Guru
+                                <i class="fas fa-cloud-upload-alt mr-1"></i> Simpan ke Cloud
                             </button>
                         </form>
 
                         <div class="overflow-y-auto max-h-96">
                             <ul id="list-guru" class="space-y-2">
-                                </ul>
+                                <li class="text-center text-gray-400 py-4 text-sm">Memuat data dari cloud...</li>
+                            </ul>
                         </div>
                     </div>
 
@@ -111,128 +117,128 @@
         </div>
     </div>
 
-    <script>
-        // === INISIALISASI VARIABEL & LOAD DATA SAAT HALAMAN DIBUKA ===
-        document.addEventListener('DOMContentLoaded', () => {
-            renderMapel();
-            renderGuru();
-        });
+    <script type="module">
+        // Import fungsi dari config.js
+        import { db, ref, push, onValue, remove } from './config.js';
 
         // ======================= LOGIKA MATA PELAJARAN =======================
         const formMapel = document.getElementById('form-mapel');
         
+        // 1. Simpan Data (Create)
         formMapel.addEventListener('submit', (e) => {
             e.preventDefault();
             const nama = document.getElementById('nama-mapel').value;
             const warna = document.getElementById('warna-mapel').value;
-            const id = Date.now(); // ID unik berdasarkan waktu
 
-            const mapelBaru = { id, nama, warna };
-            
-            // Ambil data lama, tambah baru, simpan
-            const dataMapel = JSON.parse(localStorage.getItem('jadwal_mapel')) || [];
-            dataMapel.push(mapelBaru);
-            localStorage.setItem('jadwal_mapel', JSON.stringify(dataMapel));
-
-            // Reset form dan render ulang
-            formMapel.reset();
-            renderMapel();
+            // Push ke Firebase (akan dibuatkan ID unik otomatis)
+            push(ref(db, 'mapel'), {
+                nama: nama,
+                warna: warna
+            }).then(() => {
+                formMapel.reset(); // Reset form jika sukses
+            }).catch((error) => {
+                alert("Gagal menyimpan: " + error.message);
+            });
         });
 
-        function renderMapel() {
+        // 2. Baca Data Realtime (Read)
+        onValue(ref(db, 'mapel'), (snapshot) => {
             const listEl = document.getElementById('list-mapel');
-            const dataMapel = JSON.parse(localStorage.getItem('jadwal_mapel')) || [];
-            document.getElementById('count-mapel').innerText = `${dataMapel.length} Mapel`;
-            
-            listEl.innerHTML = ''; // Kosongkan list
+            const data = snapshot.val();
+            listEl.innerHTML = ''; // Bersihkan list lama
 
-            if(dataMapel.length === 0) {
-                listEl.innerHTML = '<li class="text-center text-gray-400 text-sm py-4">Belum ada mata pelajaran.</li>';
-                return;
+            let count = 0;
+            if (data) {
+                // Loop object dari Firebase
+                Object.keys(data).forEach((key) => {
+                    const item = data[key];
+                    count++;
+                    
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center bg-white border border-gray-100 p-3 rounded shadow-sm hover:shadow-md transition';
+                    li.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-6 h-6 rounded-full shadow-sm border border-gray-200" style="background-color: ${item.warna};"></div>
+                            <span class="font-medium text-gray-700">${item.nama}</span>
+                        </div>
+                        <button id="del-mapel-${key}" class="text-red-400 hover:text-red-600 transition p-2">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    `;
+                    listEl.appendChild(li);
+
+                    // Tambahkan Event Listener Delete ke tombol yang baru dibuat
+                    document.getElementById(`del-mapel-${key}`).addEventListener('click', () => {
+                        if(confirm(`Hapus mapel "${item.nama}"?`)) {
+                            remove(ref(db, `mapel/${key}`));
+                        }
+                    });
+                });
+            } else {
+                listEl.innerHTML = '<li class="text-center text-gray-400 text-sm py-4">Belum ada data di Cloud.</li>';
             }
+            document.getElementById('count-mapel').innerText = `${count} Mapel`;
+        });
 
-            dataMapel.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'flex justify-between items-center bg-white border border-gray-100 p-3 rounded shadow-sm hover:shadow-md transition';
-                li.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-6 h-6 rounded-full shadow-sm border border-gray-200" style="background-color: ${item.warna};"></div>
-                        <span class="font-medium text-gray-700">${item.nama}</span>
-                    </div>
-                    <button onclick="hapusMapel(${item.id})" class="text-red-400 hover:text-red-600 transition">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                `;
-                listEl.appendChild(li);
-            });
-        }
-
-        function hapusMapel(id) {
-            if(confirm('Hapus mata pelajaran ini?')) {
-                let dataMapel = JSON.parse(localStorage.getItem('jadwal_mapel')) || [];
-                dataMapel = dataMapel.filter(item => item.id !== id);
-                localStorage.setItem('jadwal_mapel', JSON.stringify(dataMapel));
-                renderMapel();
-            }
-        }
 
         // ======================= LOGIKA GURU =======================
         const formGuru = document.getElementById('form-guru');
 
+        // 1. Simpan Data (Create)
         formGuru.addEventListener('submit', (e) => {
             e.preventDefault();
             const nama = document.getElementById('nama-guru').value;
-            const kode = document.getElementById('kode-guru').value;
-            const id = Date.now(); 
+            const kode = document.getElementById('kode-guru').value.toUpperCase();
 
-            const guruBaru = { id, nama, kode };
-
-            const dataGuru = JSON.parse(localStorage.getItem('jadwal_guru')) || [];
-            dataGuru.push(guruBaru);
-            localStorage.setItem('jadwal_guru', JSON.stringify(dataGuru));
-
-            formGuru.reset();
-            renderGuru();
+            push(ref(db, 'guru'), {
+                nama: nama,
+                kode: kode
+            }).then(() => {
+                formGuru.reset();
+            }).catch((error) => {
+                alert("Gagal menyimpan: " + error.message);
+            });
         });
 
-        function renderGuru() {
+        // 2. Baca Data Realtime (Read)
+        onValue(ref(db, 'guru'), (snapshot) => {
             const listEl = document.getElementById('list-guru');
-            const dataGuru = JSON.parse(localStorage.getItem('jadwal_guru')) || [];
-            document.getElementById('count-guru').innerText = `${dataGuru.length} Guru`;
-
+            const data = snapshot.val();
             listEl.innerHTML = '';
 
-            if(dataGuru.length === 0) {
-                listEl.innerHTML = '<li class="text-center text-gray-400 text-sm py-4">Belum ada data guru.</li>';
-                return;
-            }
+            let count = 0;
+            if (data) {
+                Object.keys(data).forEach((key) => {
+                    const item = data[key];
+                    count++;
 
-            dataGuru.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'flex justify-between items-center bg-white border border-gray-100 p-3 rounded shadow-sm hover:shadow-md transition';
-                li.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-xs">
-                            ${item.kode}
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center bg-white border border-gray-100 p-3 rounded shadow-sm hover:shadow-md transition';
+                    li.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-xs border border-green-200">
+                                ${item.kode}
+                            </div>
+                            <span class="font-medium text-gray-700 text-sm">${item.nama}</span>
                         </div>
-                        <span class="font-medium text-gray-700">${item.nama}</span>
-                    </div>
-                    <button onclick="hapusGuru(${item.id})" class="text-red-400 hover:text-red-600 transition">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                `;
-                listEl.appendChild(li);
-            });
-        }
+                        <button id="del-guru-${key}" class="text-red-400 hover:text-red-600 transition p-2">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    `;
+                    listEl.appendChild(li);
 
-        function hapusGuru(id) {
-            if(confirm('Hapus data guru ini?')) {
-                let dataGuru = JSON.parse(localStorage.getItem('jadwal_guru')) || [];
-                dataGuru = dataGuru.filter(item => item.id !== id);
-                localStorage.setItem('jadwal_guru', JSON.stringify(dataGuru));
-                renderGuru();
+                    // Event Listener Delete
+                    document.getElementById(`del-guru-${key}`).addEventListener('click', () => {
+                        if(confirm(`Hapus guru "${item.nama}"?`)) {
+                            remove(ref(db, `guru/${key}`));
+                        }
+                    });
+                });
+            } else {
+                listEl.innerHTML = '<li class="text-center text-gray-400 text-sm py-4">Belum ada data di Cloud.</li>';
             }
-        }
+            document.getElementById('count-guru').innerText = `${count} Guru`;
+        });
     </script>
 </body>
 </html>
