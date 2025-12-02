@@ -1,11 +1,20 @@
 <script type="module">
     import { db, ref, set, remove, onValue } from './config.js';
 
-    // Expose fungsi Drag & Drop ke Window
+    // --- VARIABLES ---
+    const kelasList = ['7A', '7B', '7C', '7D', '7E', '7F', '8A', '8B', '8C', '8D', '8E', '8F', '9A', '9B', '9C', '9D', '9E'];
+    const labSubjects = ['informatika', 'ipa', 'seni budaya', 'bahasa bali'];
+    
+    let mapelData = [];
+    let guruData = [];
+    let settingData = { slots: [] };
+    let jadwalFix = {}; 
+    let isDataLoaded = false; // Flag untuk memastikan tabel sudah dirender
+
+    // --- GLOBAL FUNCTIONS EXPOSED TO WINDOW ---
     window.allowDrop = (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); };
     window.leaveDrop = (e) => { e.currentTarget.classList.remove('drag-over'); };
     
-    // Drop: Simpan ke Firebase
     window.drop = (e, hari, kelas, jam) => {
         e.preventDefault();
         e.currentTarget.classList.remove('drag-over');
@@ -15,17 +24,15 @@
         const mapel = JSON.parse(raw);
         const cellId = `${hari}-${kelas}-${jam}`;
 
-        // Validasi
         const conflict = validateMove(hari, kelas, jam, mapel.id, null);
         if(conflict.status) {
             alert(`PERINGATAN: ${conflict.msg}`);
-            return; // Jangan simpan jika konflik
+            return;
         }
 
-        // SIMPAN KE CLOUD
         set(ref(db, `jadwal/${cellId}`), {
             mapelId: mapel.id,
-            guruId: null // Guru belum dipilih
+            guruId: null
         });
     };
 
@@ -36,70 +43,60 @@
     window.onGuruChange = (selectEl, cellId) => {
         const guruId = selectEl.value;
         const [hari, kelas, jam] = cellId.split('-');
-        
-        // Cek data saat ini dari memory lokal untuk mapelId
         const currentData = jadwalFix[cellId];
+        
         if(!currentData) return;
 
-        // Validasi
         const conflict = validateMove(hari, kelas, jam, currentData.mapelId, guruId);
         if(conflict.status) {
             alert(conflict.msg);
-            selectEl.value = ""; // Reset dropdown
-            return;
+            // Kembalikan pilihan ke sebelumnya atau kosongkan jika perlu
+            // selectEl.value = ""; 
+            return; 
         }
 
-        // UPDATE CLOUD
         set(ref(db, `jadwal/${cellId}`), {
             mapelId: currentData.mapelId,
             guruId: guruId
         });
     };
 
-    // Global render trigger
     window.renderJadwalView = renderJadwalView;
+    window.resetJadwal = () => {
+        if(confirm('Hapus SEMUA jadwal di Cloud?')) remove(ref(db, 'jadwal'));
+    }
 
-    // --- VARIABLES ---
-    const kelasList = ['7A', '7B', '7C', '7D', '7E', '7F', '8A', '8B', '8C', '8D', '8E', '8F', '9A', '9B', '9C', '9D', '9E'];
-    const labSubjects = ['informatika', 'ipa', 'seni budaya', 'bahasa bali'];
-    
-    let mapelData = [];
-    let guruData = [];
-    let settingData = { slots: [] };
-    let jadwalFix = {}; 
-
-    // --- LOAD ALL DATA FROM FIREBASE (REALTIME) ---
-    // 1. Load Mapel
+    // --- LOAD DATA (REALTIME) ---
     onValue(ref(db, 'mapel'), (snapshot) => {
         const data = snapshot.val();
         mapelData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
         renderSourceMapel();
-        hydrateCells(); // Refresh tabel jika mapel berubah
+        if(isDataLoaded) hydrateCells(); 
     });
 
-    // 2. Load Guru
     onValue(ref(db, 'guru'), (snapshot) => {
         const data = snapshot.val();
         guruData = data ? Object.keys(data).map(key => ({ id: key, ...data[key] })) : [];
-        hydrateCells(); // Refresh tabel jika guru berubah
+        if(isDataLoaded) hydrateCells();
     });
 
-    // 3. Load Pengaturan Waktu
     onValue(ref(db, 'pengaturan'), (snapshot) => {
         const data = snapshot.val();
         settingData = data || { slots: [] };
-        renderJadwalView(); // Render ulang struktur tabel
+        // Saat pengaturan waktu masuk, kita render ulang tabelnya
+        renderJadwalView(); 
     });
 
-    // 4. Load JADWAL FIX (Inti Realtime)
     onValue(ref(db, 'jadwal'), (snapshot) => {
         jadwalFix = snapshot.val() || {};
-        hydrateCells(); // Isi tabel dengan data terbaru
+        // Jadwal masuk, isi tabel (hanya jika tabel sudah ada)
+        if(isDataLoaded) hydrateCells(); 
     });
 
-    // --- RENDERING ---
+    // --- RENDERING FUNCTIONS ---
     function renderSourceMapel() {
         const container = document.getElementById('source-container');
+        if(!container) return; // Safety check
         container.innerHTML = '';
         mapelData.forEach(m => {
             const div = document.createElement('div');
@@ -113,9 +110,14 @@
     }
 
     function renderJadwalView() {
-        const hari = document.getElementById('select-hari').value;
+        // Safety Check: Pastikan elemen ada
+        const selectHari = document.getElementById('select-hari');
         const headerRow = document.getElementById('header-row');
         const tbody = document.getElementById('jadwal-body');
+        
+        if(!selectHari || !headerRow || !tbody) return; 
+
+        const hari = selectHari.value;
         
         // Render Header
         let headerHTML = `<th class="p-3 border w-24 sticky-left corner-header text-center">WAKTU / KELAS</th>`;
@@ -146,22 +148,29 @@
                 tbody.appendChild(tr);
             });
         }
+        
+        isDataLoaded = true; // Tandai tabel sudah siap
         hydrateCells();
     }
 
     function hydrateCells() {
-        const hari = document.getElementById('select-hari').value;
+        // Safety Check Paling Penting (Fix Error Anda)
+        const selectHari = document.getElementById('select-hari');
+        if(!selectHari) return; // Jika elemen belum ada, stop.
+
+        const hari = selectHari.value;
+
         // Bersihkan dulu semua cell pelajaran
         document.querySelectorAll('td[id]').forEach(td => { td.innerHTML = ''; td.classList.remove('conflict'); });
 
         // Isi data
         Object.keys(jadwalFix).forEach(cellId => {
-            // Hanya render jika cellId sesuai hari yang dipilih
             if(cellId.startsWith(hari)) {
                 const data = jadwalFix[cellId];
+                // Cek apakah elemen TD nya ada (karena mungkin pengaturan waktu berubah)
                 if(document.getElementById(cellId)) {
                     renderCellContent(cellId, data.mapelId, data.guruId);
-                    // Cek konflik visual
+                    
                     const [h, k, j] = cellId.split('-');
                     const res = validateMove(h, k, j, data.mapelId, data.guruId);
                     if(res.status) document.getElementById(cellId).classList.add('conflict');
@@ -172,6 +181,8 @@
 
     function renderCellContent(cellId, mapelId, currentGuruId) {
         const cell = document.getElementById(cellId);
+        if(!cell) return; // Safety
+
         const mapel = mapelData.find(m => m.id === mapelId);
         if(!mapel) return;
 
@@ -198,7 +209,7 @@
         `;
     }
 
-    // === VALIDASI LOGIK (SAMA SEPERTI SEBELUMNYA) ===
+    // === VALIDASI (SAMA) ===
     function validateMove(day, currentClass, timeSlot, mapelId, guruId) {
         const currentMapelObj = mapelData.find(m => m.id === mapelId);
         const mapelName = currentMapelObj ? currentMapelObj.nama.toLowerCase() : "";
@@ -235,12 +246,5 @@
             }
         }
         return { status: false, msg: "Aman" };
-    }
-    
-    // Reset Cloud
-    window.resetJadwal = () => {
-        if(confirm('Hapus SEMUA jadwal di Cloud? Semua device akan kehilangan data.')) {
-            remove(ref(db, 'jadwal'));
-        }
     }
 </script>
